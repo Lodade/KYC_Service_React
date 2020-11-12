@@ -44,14 +44,33 @@ function Explore_Dashboard(props) {
 
 function Explore_ViewProduct(props) {
     let page;
+    let resultsManager = resultsBuilder();
     const [showResults, changeShow] = React.useState(false);
     const [symbolText, changeSymbol] = React.useState("");
     const [result, changeResult] = React.useState();
+    const [cnAccounts, changeCN] = React.useState({
 
-    function resultCheck(){
-        if(result != undefined){
+    });
+    const [niAccounts, changeNI] = React.useState();
+    const [eligProvinces, changeProvinces] = React.useState({
+        AB: "No", BC: "No", MB: "No", NB: "No",
+        NL: "No", NT: "No", NS: "No", NU: "No",
+        ON: "No", PE: "No", QC: "No", SK: "No",
+        YT: "No"
+    });
+    const [eligTransactions, changeTrxns] = React.useState({
+        B: "Not Allowed", CR: "Not Allowed", SI: "Not Allowed", SO: "Not Allowed",
+        S: "Not Allowed", II: "Not Allowed", IO: "Not Allowed", EI: "Not Allowed",
+        EO: "Not Allowed", LI: "Not Allowed", LO: "Not Allowed", F: "Not Allowed",
+        R: "Not Allowed", CI: "Not Allowed", CO: "Not Allowed", SM: "Not Allowed"
+    });
+    const [eligProdModels, changeProdModels] = React.useState();
+
+    function resultCheck() {
+        if (result != undefined) {
             if (result[0] == null) {
                 console.log("No product exists by that name");
+                changeResult();
             } else {
                 changeShow(true);
             }
@@ -60,8 +79,16 @@ function Explore_ViewProduct(props) {
 
     async function handleSubmit(e) {
         e.preventDefault();
+        let basicResults = queryProcess("SELECT * FROM fsrv_prod WHERE concat(MGMT_CODE, FUND_ID) = '" + symbolText + "'");
         if (symbolText != "") {
-            changeResult(await queryProcess("SELECT * FROM fsrv_prod WHERE concat(MGMT_CODE, FUND_ID) = '" + symbolText + "'"));
+            basicResults.then(async (values) => {
+                changeResult(await resultsManager.resultsDetailsPopulator(values));
+                changeCN(await resultsManager.cnAccountsPopulator(values));
+                changeNI(await resultsManager.niAccountsPopulator(values));
+                changeProvinces(await resultsManager.eligProvincesPopulator(values));
+                changeTrxns(await resultsManager.eligibleTrxnsPopulator(values));
+                changeProdModels(await resultsManager.eligibleProdModelsPopulator(values));
+            });
         } else {
             console.log("No product has been entered");
         }
@@ -74,7 +101,8 @@ function Explore_ViewProduct(props) {
     }
 
     if (showResults) {
-        page = <ResultsArea queryResult={result[0]} />
+        page = <ResultsArea fullResults={result[0]} cnAccs={cnAccounts} niAccs={niAccounts} eligModels={eligProdModels}
+            eligProvs={eligProvinces} eligTrxns={eligTransactions} />
     } else {
         page = <SearchProduct onSearch={handleSubmit} symbolInput={handleInput} />
     }
@@ -97,12 +125,13 @@ function SearchProduct(props) {
 
 function ResultsArea(props) {
     let resultsManager = resultsBuilder();
-    let rows = resultsManager.resultsHeaderPopulator(props.queryResult);
+    let topRows = resultsManager.resultsHeaderPopulator(props.fullResults);
+    console.log(props.cnAccs);
     let page = (
         <div id="resultsArea">
             <p><a>Product Search</a>{'>'}<a>Results</a></p>
-            <p id="resultsFirstRow">{rows[0]}</p>
-            <p id="resultsSecondRow">{rows[1]}</p>
+            <p id="resultsFirstRow">{topRows[0]}</p>
+            <p id="resultsSecondRow">{topRows[1]}</p>
             <table id="resultsTable">
                 <thead>
                     <tr>
@@ -113,87 +142,87 @@ function ResultsArea(props) {
                 <tbody>
                     <tr>
                         <td>Management Company Code</td>
-                        <td id="MGMT_CODE"></td>
+                        <td>{props.fullResults.MGMT_CODE}</td>
                     </tr>
                     <tr>
                         <td>Fund Identifier</td>
-                        <td id="FUND_ID"></td>
+                        <td>{props.fullResults.FUND_ID}</td>
                     </tr>
                     <tr>
                         <td>CUSIP</td>
-                        <td id="CUSIP"></td>
+                        <td>{props.fullResults.CUSIP}</td>
                     </tr>
                     <tr>
                         <td>ISIN</td>
-                        <td id="ISIN"></td>
+                        <td>{props.fullResults.ISIN}</td>
                     </tr>
                     <tr>
                         <td>Fund Brand</td>
-                        <td></td>
+                        <td>{props.fullResults.BRAND}</td>
                     </tr>
                     <tr>
                         <td>Management Company Brand Name</td>
-                        <td id="MGMT_CO_BRAND_NM"></td>
+                        <td>{props.fullResults.MGMT_CO_BRAND_NM}</td>
                     </tr>
                     <tr>
                         <td>Series</td>
-                        <td id="SERIES"></td>
+                        <td>{props.fullResults.SERIES}</td>
                     </tr>
                     <tr>
-                        <td>class</td>
-                        <td id="CLASS"></td>
+                        <td>Class</td>
+                        <td>{props.fullResults.CLASS}</td>
                     </tr>
                     <tr>
                         <td>Series-Class Sequence in Fund Name</td>
-                        <td></td>
+                        <td>{props.fullResults.SER_CLASS_SEQ_IN_NAME}</td>
                     </tr>
                     <tr>
                         <td>English Short Name</td>
-                        <td id="ENG_SHORT_NM"></td>
+                        <td>{props.fullResults.ENG_SHORT_NM}</td>
                     </tr>
                     <tr>
                         <td>English Long Name</td>
-                        <td id="ENG_LONG_NM"></td>
+                        <td>{props.fullResults.ENG_LONG_NM}</td>
                     </tr>
                     <tr>
                         <td>French Short Name</td>
-                        <td id="FRE_SHORT_NM"></td>
+                        <td>{props.fullResults.FRE_SHORT_NM}</td>
                     </tr>
                     <tr>
                         <td>French Long Name</td>
-                        <td id="FRE_LONG_NM"></td>
+                        <td>{props.fullResults.FRE_LONG_NM}</td>
                     </tr>
                     <tr>
                         <td>Product Type</td>
-                        <td id="FULL_PROD_TYPE"></td>
+                        <td>{props.fullResults.FULL_PROD_TYPE}</td>
                     </tr>
                     <tr>
                         <td>Currency</td>
-                        <td id="FULL_CURRENCY"></td>
+                        <td>{props.fullResults.FULL_CURRENCY}</td>
                     </tr>
                     <tr>
                         <td>Load Type</td>
-                        <td id="FULL_LOAD_TYPE"></td>
+                        <td>{props.fullResults.FULL_LOAD_TYPE}</td>
                     </tr>
                     <tr>
                         <td>Fund Classification (CIFSC)</td>
-                        <td id=""></td>
+                        <td>{props.fullResults.CLASSIFICATION}</td>
                     </tr>
                     <tr>
                         <td>Fund Tax Structure</td>
-                        <td id=""></td>
+                        <td>{props.fullResults.TAX_STRUCT}</td>
                     </tr>
                     <tr>
                         <td>Money Market Flag</td>
-                        <td id="MM_FLAG"></td>
+                        <td>{props.fullResults.MM_FLAG}</td>
                     </tr>
                     <tr>
                         <td>Bare Trustee Flag</td>
-                        <td id="BARE_TRUSTEE_FLAG"></td>
+                        <td>{props.fullResults.BARE_TRUSTEE_FLAG}</td>
                     </tr>
                     <tr>
                         <td>Risk Classification</td>
-                        <td id="RISK_CLASS"></td>
+                        <td>{props.fullResults.RISK_CLASS}</td>
                     </tr>
                     <tr>
                         <td>Fees:</td>
@@ -201,39 +230,39 @@ function ResultsArea(props) {
                     </tr>
                     <tr>
                         <td>Account Setup Fee</td>
-                        <td id="ACCT_SETUP_FEE"></td>
+                        <td>{props.fullResults.ACCT_SETUP_FEE}</td>
                     </tr>
                     <tr>
                         <td>Service Fee Rate</td>
-                        <td id="SERV_FEE_RATE"></td>
+                        <td>{props.fullResults.SERV_FEE_RATE}</td>
                     </tr>
                     <tr>
                         <td>Service Fee Frequency</td>
-                        <td id="SERV_FEE_FREQ"></td>
+                        <td>{props.fullResults.SERV_FEE_FREQ}</td>
                     </tr>
                     <tr>
                         <td>DSC%</td>
-                        <td id="CURR"></td>
+                        <td>{props.fullResults.DSC}</td>
                     </tr>
                     <tr>
                         <td>DSC Fee Duration</td>
-                        <td id="CURR"></td>
+                        <td>{props.fullResults.DSC_DURATION}</td>
                     </tr>
                     <tr>
                         <td>Maximum Client Paid Commission %</td>
-                        <td id="MAX_COMM"></td>
+                        <td>{props.fullResults.MAX_COMM}</td>
                     </tr>
                     <tr>
                         <td>Maximum Client Paid Switch Commission %</td>
-                        <td id="MAX_SW_COMM"></td>
+                        <td>{props.fullResults.MAX_SW_COMM}</td>
                     </tr>
                     <tr>
                         <td>Negotiated Fee</td>
-                        <td id="NEGOT_FEE"></td>
+                        <td>{props.fullResults.NEGOT_FEE}</td>
                     </tr>
                     <tr>
                         <td>Negotiated Trailer</td>
-                        <td id="NEGOT_TRAILER"></td>
+                        <td>{props.fullResults.NEGOT_TRAILER}</td>
                     </tr>
                     <tr>
                         <td>Fee Based Account Eligibility</td>
@@ -241,39 +270,39 @@ function ResultsArea(props) {
                     </tr>
                     <tr>
                         <td>Discount Brokerage Only</td>
-                        <td id="DISC_BROKER_ONLY"></td>
+                        <td>{props.fullResults.DISC_BROKER_ONLY}</td>
                     </tr>
                     <tr>
                         <td>Registration Document Type</td>
-                        <td id="REG_DOC_TYPE"></td>
+                        <td>{props.fullResults.REG_DOC_TYPE}</td>
                     </tr>
                     <tr>
                         <td>Eligible US</td>
-                        <td id="ELIG_US"></td>
+                        <td>{props.fullResults.ELIG_US}</td>
                     </tr>
                     <tr>
                         <td>Eligible Offshore</td>
-                        <td id="ELIG_OFFSHORE"></td>
+                        <td>{props.fullResults.ELIG_OFFSHORE}</td>
                     </tr>
                     <tr>
                         <td>Eligible PAC</td>
-                        <td id="ELIG_PAC"></td>
+                        <td>{props.fullResults.ELIG_PAC}</td>
                     </tr>
                     <tr>
                         <td>Eligible SWP</td>
-                        <td id="ELIG_SWP"></td>
+                        <td>{props.fullResults.ELIG_SWP}</td>
                     </tr>
                     <tr>
                         <td>Effective Date</td>
-                        <td id="EFF_DT"></td>
+                        <td>{props.fullResults.EFF_DT}</td>
                     </tr>
                     <tr>
                         <td>Cut Off Time</td>
-                        <td id="CUT_OFF_TIME"></td>
+                        <td>{props.fullResults.CUT_OFF_TIME}</td>
                     </tr>
                     <tr>
                         <td>Fund Link Identifier</td>
-                        <td id="FUND_LINK_ID"></td>
+                        <td>{props.fullResults.FUND_LINK_ID}</td>
                     </tr>
                     <tr>
                         <td>Fund Model:</td>
@@ -317,31 +346,31 @@ function ResultsArea(props) {
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum Initial Investment</td>
-                        <td id="MIN_FIRST"></td>
+                        <td>{props.fullResults.MIN_FIRST}</td>
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum Subsequent Investment</td>
-                        <td id="MIN_NXT"></td>
+                        <td>{props.fullResults.MIN_NXT}</td>
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum Sell</td>
-                        <td id="MIN_SELL"></td>
+                        <td>{props.fullResults.MIN_SELL}</td>
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum Switch</td>
-                        <td id="MIN_SW"></td>
+                        <td>{props.fullResults.MIN_SW}</td>
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum Account Balance</td>
-                        <td id="MIN_BAL"></td>
+                        <td>{props.fullResults.MIN_BAL}</td>
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum PAC Investment</td>
-                        <td id="MIN_PAC"></td>
+                        <td>{props.fullResults.MIN_PAC}</td>
                     </tr>
                     <tr className="hiddenMinimums minimums">
                         <td>Minimum SWP</td>
-                        <td id="MIN_SWP"></td>
+                        <td>{props.fullResults.MIN_SWP}</td>
                     </tr>
                     <tr>
                         <td><b>Eligible Provinces:</b></td>
@@ -349,55 +378,55 @@ function ResultsArea(props) {
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Alberta</td>
-                        <td id="AB_prov"></td>
+                        <td>{props.eligProvs.AB}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>British Columbia</td>
-                        <td id="BC_prov"></td>
+                        <td>{props.eligProvs.BC}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Manitoba</td>
-                        <td id="MB_prov"></td>
+                        <td>{props.eligProvs.MB}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>New Brunswick</td>
-                        <td id="NB_prov"></td>
+                        <td>{props.eligProvs.NB}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>New Foundland</td>
-                        <td id="NL_prov"></td>
+                        <td>{props.eligProvs.NL}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Northwest Territories</td>
-                        <td id="NT_prov"></td>
+                        <td>{props.eligProvs.NT}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Nova Scotia</td>
-                        <td id="NS_prov"></td>
+                        <td>{props.eligProvs.NS}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Nunavut</td>
-                        <td id="NU_prov"></td>
+                        <td>{props.eligProvs.NU}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Ontario</td>
-                        <td id="ON_prov"></td>
+                        <td>{props.eligProvs.ON}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Prince Edward Island</td>
-                        <td id="PE_prov"></td>
+                        <td>{props.eligProvs.PE}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Quebec</td>
-                        <td id="QC_prov"></td>
+                        <td>{props.eligProvs.QC}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Saskatchewan</td>
-                        <td id="SK_prov"></td>
+                        <td>{props.eligProvs.SK}</td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Yukon Territories</td>
-                        <td id="YT_prov"></td>
+                        <td>{props.eligProvs.YT}</td>
                     </tr>
                     <tr>
                         <td><b>Eligible Transactions:</b></td>
@@ -405,146 +434,146 @@ function ResultsArea(props) {
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Buy</td>
-                        <td id="B_status"></td>
+                        <td>{props.eligTrxns.B}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Commission Rebate</td>
-                        <td id="CR_status"></td>
+                        <td>{props.eligTrxns.CR}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Switch-in</td>
-                        <td id="SI_status"></td>
+                        <td>{props.eligTrxns.SI}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Switch-out</td>
-                        <td id="SO_status"></td>
+                        <td>{props.eligTrxns.SO}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Sell</td>
-                        <td id="S_status"></td>
+                        <td>{props.eligTrxns.S}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Internal Transfer-in</td>
-                        <td id="II_status"></td>
+                        <td>{props.eligTrxns.II}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Internal Transfer-out</td>
-                        <td id="IO_status"></td>
+                        <td>{props.eligTrxns.IO}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>External Transfer-in</td>
-                        <td id="EI_status"></td>
+                        <td>{props.eligTrxns.EI}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>External Transfer-out</td>
-                        <td id="EO_status"></td>
+                        <td>{props.eligTrxns.EO}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>LSIF Rollover-in</td>
-                        <td id="LI_status"></td>
+                        <td>{props.eligTrxns.LI}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>LSIF Rollover-out</td>
-                        <td id="LO_status"></td>
+                        <td>{props.eligTrxns.LO}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Fee</td>
-                        <td id="F_status"></td>
+                        <td>{props.eligTrxns.F}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Reset</td>
-                        <td id="R_status"></td>
+                        <td>{props.eligTrxns.R}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>ICT-in</td>
-                        <td id="CI_status"></td>
+                        <td>{props.eligTrxns.CI}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>ICT-out</td>
-                        <td id="CO_status"></td>
+                        <td>{props.eligTrxns.CO}</td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Seg. Maturity</td>
-                        <td id="SM_status"></td>
+                        <td>{props.eligTrxns.SM}</td>
                     </tr>
                     <tr>
                         <td><b>Accounts - Client Name:</b></td>
                         <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('cnaccounts', 'hiddenCnaccounts'); }}>Toggle Section</button> <span id="cnaccountsStatusButton" className="statusButton"></span></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>01</td>
+                        <td>Open</td>
                         <td id="01_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>02</td>
+                        <td>RRSP</td>
                         <td id="02_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>04</td>
+                        <td>RRIF</td>
                         <td id="04_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>05</td>
+                        <td>RESP - Individual Plan</td>
                         <td id="05_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>06</td>
+                        <td>RESP - Family Plan</td>
                         <td id="06_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>07</td>
+                        <td>DPSP</td>
                         <td id="07_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>08</td>
+                        <td>RHOSP (Quebec Only)</td>
                         <td id="08_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>10</td>
+                        <td>LIF</td>
                         <td id="10_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>11</td>
+                        <td>LIRA</td>
                         <td id="11_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>12</td>
+                        <td>LRIF (Alberta, Saskatchewan)</td>
                         <td id="12_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>13</td>
+                        <td>RRTF (Quebec Only)</td>
                         <td id="13_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>14</td>
+                        <td>PRIF</td>
                         <td id="14_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>15</td>
+                        <td>RPP - Defined Benefit</td>
                         <td id="15_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>16</td>
+                        <td>RPP - Defined Contribution</td>
                         <td id="16_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>17</td>
+                        <td>TFSA - Tax Free Savings Account</td>
                         <td id="17_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>18</td>
+                        <td>RDSP - Registered Disability Savings Plan</td>
                         <td id="18_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>19</td>
+                        <td>RLIF - Restricted Life Income Fund</td>
                         <td id="19_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>20</td>
+                        <td>RLSP - Restricted Locked-In Savings Plan</td>
                         <td id="20_CNACC"></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
-                        <td>21</td>
+                        <td>IPP - Individual Pension Plan</td>
                         <td id="21_CNACC"></td>
                     </tr>
                     <tr>

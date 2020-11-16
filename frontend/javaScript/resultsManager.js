@@ -1,5 +1,7 @@
 function resultsBuilder() {
   let query;
+  let condensedResult;
+  let accountResults;
   return {
     resultsHeaderPopulator: function (resultObject) {
       let classHolder;
@@ -28,17 +30,69 @@ function resultsBuilder() {
       return fullResults;
     },
     cnAccountsPopulator: async function (resultObject) {
+      condensedResult = {
+        "01": "No",
+        "02": "No",
+        "04": "No",
+        "05": "No",
+        "06": "No",
+        "07": "No",
+        "08": "No",
+        "10": "No",
+        "11": "No",
+        "12": "No",
+        "13": "No",
+        "14": "No",
+        "15": "No",
+        "16": "No",
+        "17": "No",
+        "18": "No",
+        "19": "No",
+        "20": "No",
+        "21": "No"
+      };
       query = "SELECT * FROM fsrv_elig_acct_types acct WHERE acct.SEQ_ID=('" + resultObject[0].FSRV_ID + "') AND acct.DESIGNATION=('1')";
-      let accountResults = queryProcess(query);
-      return accountResults;
+      accountResults = await queryProcess(query);
+
+      for (let i = 0; i < accountResults.length; i++) {
+        condensedResult[accountResults[i].ACCT_TYPE] = "Yes";
+      }
+
+      return condensedResult;
     },
     niAccountsPopulator: async function (resultObject) {
+      condensedResult = {
+        "01": "No",
+        "02": "No",
+        "04": "No",
+        "05": "No",
+        "06": "No",
+        "07": "No",
+        "08": "No",
+        "10": "No",
+        "11": "No",
+        "12": "No",
+        "13": "No",
+        "14": "No",
+        "15": "No",
+        "16": "No",
+        "17": "No",
+        "18": "No",
+        "19": "No",
+        "20": "No",
+        "21": "No"
+      };
       query = "SELECT * FROM fsrv_elig_acct_types acct WHERE acct.SEQ_ID=('" + resultObject[0].FSRV_ID + "') AND acct.DESIGNATION=('2')";
-      accountResults = queryProcess(query);
-      return accountResults;
+      accountResults = await queryProcess(query);
+
+      for (let i = 0; i < accountResults.length; i++) {
+        condensedResult[accountResults[i].ACCT_TYPE] = "Yes";
+      }
+
+      return condensedResult;
     },
     eligProvincesPopulator: async function (resultObject) {
-      let condensedResult = {
+      condensedResult = {
         AB: "No",
         BC: "No",
         MB: "No",
@@ -63,7 +117,7 @@ function resultsBuilder() {
       return condensedResult;
     },
     eligibleTrxnsPopulator: async function (resultObject) {
-      let condensedResult = {
+      condensedResult = {
         B: "Not Allowed",
         CR: "Not Allowed",
         SI: "Not Allowed",
@@ -96,8 +150,32 @@ function resultsBuilder() {
     },
     eligibleProdModelsPopulator: async function (resultObject) {
       query = "SELECT * FROM fsrv_prod_model model WHERE model.SEQ_ID=('" + resultObject[0].FSRV_ID + "')";
-      let productModels = queryProcess(query);
+      let productModels = await queryProcess(query);
       return productModels;
+    },
+    statusUpdate: async function (objectToCheck, statement) {
+      let result = "redStatusBackground";
+      let foundOne = false;
+      let foundAll = true;
+      let keys = Object.keys(objectToCheck);
+
+      for (let i = 0; i < keys.length; i++) {
+        if (objectToCheck[keys[i]] == statement) {
+          foundOne = true;
+        } else if (objectToCheck[keys[i]] != statement) {
+          foundAll = false;
+        }
+      }
+
+      if (foundOne && foundAll) {
+        result = "greenStatusBackground";
+      } else if (foundOne && !foundAll) {
+        result = "yellowStatusBackground";
+      } else if (!foundOne && !foundAll) {
+        result = "redStatusBackground";
+      }
+
+      return result;
     }
   };
 }

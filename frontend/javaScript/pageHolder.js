@@ -89,8 +89,48 @@ function Explore_ViewProduct(props) {
   const [showResults, changeShow] = React.useState(false);
   const [symbolText, changeSymbol] = React.useState("");
   const [result, changeResult] = React.useState();
-  const [cnAccounts, changeCN] = React.useState({});
-  const [niAccounts, changeNI] = React.useState();
+  const [cnAccounts, changeCN] = React.useState({
+    "01": "No",
+    "02": "No",
+    "04": "No",
+    "05": "No",
+    "06": "No",
+    "07": "No",
+    "08": "No",
+    "10": "No",
+    "11": "No",
+    "12": "No",
+    "13": "No",
+    "14": "No",
+    "15": "No",
+    "16": "No",
+    "17": "No",
+    "18": "No",
+    "19": "No",
+    "20": "No",
+    "21": "No"
+  });
+  const [niAccounts, changeNI] = React.useState({
+    "01": "No",
+    "02": "No",
+    "04": "No",
+    "05": "No",
+    "06": "No",
+    "07": "No",
+    "08": "No",
+    "10": "No",
+    "11": "No",
+    "12": "No",
+    "13": "No",
+    "14": "No",
+    "15": "No",
+    "16": "No",
+    "17": "No",
+    "18": "No",
+    "19": "No",
+    "20": "No",
+    "21": "No"
+  });
   const [eligProvinces, changeProvinces] = React.useState({
     AB: "No",
     BC: "No",
@@ -129,7 +169,6 @@ function Explore_ViewProduct(props) {
   function resultCheck() {
     if (result != undefined) {
       if (result[0] == null) {
-        console.log("No product exists by that name");
         changeResult();
       } else {
         changeShow(true);
@@ -142,13 +181,17 @@ function Explore_ViewProduct(props) {
     let basicResults = queryProcess("SELECT * FROM fsrv_prod WHERE concat(MGMT_CODE, FUND_ID) = '" + symbolText + "'");
 
     if (symbolText != "") {
-      basicResults.then(async values => {
-        changeResult(await resultsManager.resultsDetailsPopulator(values));
-        changeCN(await resultsManager.cnAccountsPopulator(values));
-        changeNI(await resultsManager.niAccountsPopulator(values));
-        changeProvinces(await resultsManager.eligProvincesPopulator(values));
-        changeTrxns(await resultsManager.eligibleTrxnsPopulator(values));
-        changeProdModels(await resultsManager.eligibleProdModelsPopulator(values));
+      await basicResults.then(async values => {
+        if (values.length != 0) {
+          changeResult(await resultsManager.resultsDetailsPopulator(values));
+          changeCN(await resultsManager.cnAccountsPopulator(values));
+          changeNI(await resultsManager.niAccountsPopulator(values));
+          changeProvinces(await resultsManager.eligProvincesPopulator(values));
+          changeTrxns(await resultsManager.eligibleTrxnsPopulator(values));
+          changeProdModels(await resultsManager.eligibleProdModelsPopulator(values));
+        } else {
+          console.log("No product exists by that name");
+        }
       });
     } else {
       console.log("No product has been entered");
@@ -200,7 +243,19 @@ function SearchProduct(props) {
 function ResultsArea(props) {
   let resultsManager = resultsBuilder();
   let topRows = resultsManager.resultsHeaderPopulator(props.fullResults);
-  console.log(props.cnAccs);
+  const [cnStatus, changeCNStatus] = React.useState("redStatusBackground");
+  const [niStatus, changeNIStatus] = React.useState("redStatusBackground");
+  const [provStatus, changeProvStatus] = React.useState("redStatusBackground");
+  const [transStatus, changeTransStatus] = React.useState("redStatusBackground");
+
+  async function checkStatus() {
+    changeCNStatus(await resultsManager.statusUpdate(props.cnAccs, "Yes"));
+    changeNIStatus(await resultsManager.statusUpdate(props.niAccs, "Yes"));
+    changeProvStatus(await resultsManager.statusUpdate(props.eligProvs, "Yes"));
+    changeTransStatus(await resultsManager.statusUpdate(props.eligTrxns, "Allowed"));
+  }
+
+  React.useEffect(checkStatus);
   let page = /*#__PURE__*/React.createElement("div", {
     id: "resultsArea"
   }, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("a", null, "Product Search"), '>', /*#__PURE__*/React.createElement("a", null, "Results")), /*#__PURE__*/React.createElement("p", {
@@ -259,7 +314,7 @@ function ResultsArea(props) {
     }
   }, "Toggle Section"), " ", /*#__PURE__*/React.createElement("span", {
     id: "provincesStatusButton",
-    className: "statusButton"
+    className: "statusButton " + provStatus
   }))), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenProvinces provinces"
   }, /*#__PURE__*/React.createElement("td", null, "Alberta"), /*#__PURE__*/React.createElement("td", null, props.eligProvs.AB)), /*#__PURE__*/React.createElement("tr", {
@@ -294,7 +349,7 @@ function ResultsArea(props) {
     }
   }, "Toggle Section"), " ", /*#__PURE__*/React.createElement("span", {
     id: "transactionsStatusButton",
-    className: "statusButton"
+    className: "statusButton " + transStatus
   }))), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenTransactions transactions"
   }, /*#__PURE__*/React.createElement("td", null, "Buy"), /*#__PURE__*/React.createElement("td", null, props.eligTrxns.B)), /*#__PURE__*/React.createElement("tr", {
@@ -335,84 +390,46 @@ function ResultsArea(props) {
     }
   }, "Toggle Section"), " ", /*#__PURE__*/React.createElement("span", {
     id: "cnaccountsStatusButton",
-    className: "statusButton"
+    className: "statusButton " + cnStatus
   }))), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "Open"), /*#__PURE__*/React.createElement("td", {
-    id: "01_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "Open"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["01"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RRSP"), /*#__PURE__*/React.createElement("td", {
-    id: "02_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RRSP"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["02"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RRIF"), /*#__PURE__*/React.createElement("td", {
-    id: "04_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RRIF"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["04"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RESP - Individual Plan"), /*#__PURE__*/React.createElement("td", {
-    id: "05_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RESP - Individual Plan"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["05"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RESP - Family Plan"), /*#__PURE__*/React.createElement("td", {
-    id: "06_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RESP - Family Plan"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["06"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "DPSP"), /*#__PURE__*/React.createElement("td", {
-    id: "07_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "DPSP"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["07"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RHOSP (Quebec Only)"), /*#__PURE__*/React.createElement("td", {
-    id: "08_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RHOSP (Quebec Only)"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["08"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "LIF"), /*#__PURE__*/React.createElement("td", {
-    id: "10_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "LIF"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["10"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "LIRA"), /*#__PURE__*/React.createElement("td", {
-    id: "11_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "LIRA"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["11"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "LRIF (Alberta, Saskatchewan)"), /*#__PURE__*/React.createElement("td", {
-    id: "12_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "LRIF (Alberta, Saskatchewan)"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["12"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RRTF (Quebec Only)"), /*#__PURE__*/React.createElement("td", {
-    id: "13_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RRTF (Quebec Only)"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["13"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "PRIF"), /*#__PURE__*/React.createElement("td", {
-    id: "14_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "PRIF"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["14"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RPP - Defined Benefit"), /*#__PURE__*/React.createElement("td", {
-    id: "15_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RPP - Defined Benefit"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["15"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RPP - Defined Contribution"), /*#__PURE__*/React.createElement("td", {
-    id: "16_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RPP - Defined Contribution"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["16"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "TFSA - Tax Free Savings Account"), /*#__PURE__*/React.createElement("td", {
-    id: "17_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "TFSA - Tax Free Savings Account"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["17"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RDSP - Registered Disability Savings Plan"), /*#__PURE__*/React.createElement("td", {
-    id: "18_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RDSP - Registered Disability Savings Plan"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["18"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RLIF - Restricted Life Income Fund"), /*#__PURE__*/React.createElement("td", {
-    id: "19_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RLIF - Restricted Life Income Fund"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["19"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "RLSP - Restricted Locked-In Savings Plan"), /*#__PURE__*/React.createElement("td", {
-    id: "20_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RLSP - Restricted Locked-In Savings Plan"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["20"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenCnaccounts cnaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "IPP - Individual Pension Plan"), /*#__PURE__*/React.createElement("td", {
-    id: "21_CNACC"
-  })), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("b", null, "Accounts - Nom/Inter:")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("td", null, "IPP - Individual Pension Plan"), /*#__PURE__*/React.createElement("td", null, props.cnAccs["21"])), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("b", null, "Accounts - Nom/Inter:")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "expandButton",
     onClick: async () => {
@@ -420,84 +437,46 @@ function ResultsArea(props) {
     }
   }, "Toggle Section"), " ", /*#__PURE__*/React.createElement("span", {
     id: "niaccountsStatusButton",
-    className: "statusButton"
+    className: "statusButton " + niStatus
   }))), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "01"), /*#__PURE__*/React.createElement("td", {
-    id: "01_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "Open"), /*#__PURE__*/React.createElement("td", null, props.niAccs["01"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "02"), /*#__PURE__*/React.createElement("td", {
-    id: "02_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RRSP"), /*#__PURE__*/React.createElement("td", null, props.niAccs["02"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "04"), /*#__PURE__*/React.createElement("td", {
-    id: "04_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RRIF"), /*#__PURE__*/React.createElement("td", null, props.niAccs["04"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "05"), /*#__PURE__*/React.createElement("td", {
-    id: "05_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RESP - Individual Plan"), /*#__PURE__*/React.createElement("td", null, props.niAccs["05"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "06"), /*#__PURE__*/React.createElement("td", {
-    id: "06_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RESP - Family Plan"), /*#__PURE__*/React.createElement("td", null, props.niAccs["06"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "07"), /*#__PURE__*/React.createElement("td", {
-    id: "07_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "DPSP"), /*#__PURE__*/React.createElement("td", null, props.niAccs["07"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "08"), /*#__PURE__*/React.createElement("td", {
-    id: "08_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RHOSP (Quebec Only)"), /*#__PURE__*/React.createElement("td", null, props.niAccs["08"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "10"), /*#__PURE__*/React.createElement("td", {
-    id: "10_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "LIF"), /*#__PURE__*/React.createElement("td", null, props.niAccs["10"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "11"), /*#__PURE__*/React.createElement("td", {
-    id: "11_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "LIRA"), /*#__PURE__*/React.createElement("td", null, props.niAccs["11"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "12"), /*#__PURE__*/React.createElement("td", {
-    id: "12_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "LRIF (Alberta, Saskatchewan)"), /*#__PURE__*/React.createElement("td", null, props.niAccs["12"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "13"), /*#__PURE__*/React.createElement("td", {
-    id: "13_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RRTF (Quebec only)"), /*#__PURE__*/React.createElement("td", null, props.niAccs["13"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "14"), /*#__PURE__*/React.createElement("td", {
-    id: "14_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "PRIF"), /*#__PURE__*/React.createElement("td", null, props.niAccs["14"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "15"), /*#__PURE__*/React.createElement("td", {
-    id: "15_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RPP - Defined Benefit"), /*#__PURE__*/React.createElement("td", null, props.niAccs["15"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "16"), /*#__PURE__*/React.createElement("td", {
-    id: "16_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RPP - Defined Contribution"), /*#__PURE__*/React.createElement("td", null, props.niAccs["16"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "17"), /*#__PURE__*/React.createElement("td", {
-    id: "17_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "TFSA - Tax Free Savings Account"), /*#__PURE__*/React.createElement("td", null, props.niAccs["17"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "18"), /*#__PURE__*/React.createElement("td", {
-    id: "18_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RDSP - Registered Disability Savings Plan"), /*#__PURE__*/React.createElement("td", null, props.niAccs["18"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "19"), /*#__PURE__*/React.createElement("td", {
-    id: "19_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RLIF - Restricted Life Income Fund"), /*#__PURE__*/React.createElement("td", null, props.niAccs["19"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "20"), /*#__PURE__*/React.createElement("td", {
-    id: "20_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, /*#__PURE__*/React.createElement("td", null, "RLSP - Restricted Locked-In Savings Plan"), /*#__PURE__*/React.createElement("td", null, props.niAccs["20"])), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenNiaccounts niaccounts"
-  }, /*#__PURE__*/React.createElement("td", null, "21"), /*#__PURE__*/React.createElement("td", {
-    id: "21_NIACC"
-  })), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("b", null, "Dividend Options:")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("td", null, "IPP - Individual Pension Plan"), /*#__PURE__*/React.createElement("td", null, props.niAccs["21"])), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("b", null, "Dividend Options:")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "expandButton",
     onClick: async () => {

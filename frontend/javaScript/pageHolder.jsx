@@ -49,9 +49,19 @@ function Explore_ViewProduct(props) {
     const [symbolText, changeSymbol] = React.useState("");
     const [result, changeResult] = React.useState();
     const [cnAccounts, changeCN] = React.useState({
-
+        "01": "No", "02": "No", "04": "No", "05": "No",
+        "06": "No", "07": "No", "08": "No", "10": "No",
+        "11": "No", "12": "No", "13": "No", "14": "No",
+        "15": "No", "16": "No", "17": "No", "18": "No",
+        "19": "No", "20": "No", "21": "No"
     });
-    const [niAccounts, changeNI] = React.useState();
+    const [niAccounts, changeNI] = React.useState({
+        "01": "No", "02": "No", "04": "No", "05": "No",
+        "06": "No", "07": "No", "08": "No", "10": "No",
+        "11": "No", "12": "No", "13": "No", "14": "No",
+        "15": "No", "16": "No", "17": "No", "18": "No",
+        "19": "No", "20": "No", "21": "No"
+    });
     const [eligProvinces, changeProvinces] = React.useState({
         AB: "No", BC: "No", MB: "No", NB: "No",
         NL: "No", NT: "No", NS: "No", NU: "No",
@@ -69,7 +79,6 @@ function Explore_ViewProduct(props) {
     function resultCheck() {
         if (result != undefined) {
             if (result[0] == null) {
-                console.log("No product exists by that name");
                 changeResult();
             } else {
                 changeShow(true);
@@ -81,13 +90,17 @@ function Explore_ViewProduct(props) {
         e.preventDefault();
         let basicResults = queryProcess("SELECT * FROM fsrv_prod WHERE concat(MGMT_CODE, FUND_ID) = '" + symbolText + "'");
         if (symbolText != "") {
-            basicResults.then(async (values) => {
-                changeResult(await resultsManager.resultsDetailsPopulator(values));
-                changeCN(await resultsManager.cnAccountsPopulator(values));
-                changeNI(await resultsManager.niAccountsPopulator(values));
-                changeProvinces(await resultsManager.eligProvincesPopulator(values));
-                changeTrxns(await resultsManager.eligibleTrxnsPopulator(values));
-                changeProdModels(await resultsManager.eligibleProdModelsPopulator(values));
+            await basicResults.then(async (values) => {
+                if (values.length != 0) {
+                    changeResult(await resultsManager.resultsDetailsPopulator(values));
+                    changeCN(await resultsManager.cnAccountsPopulator(values));
+                    changeNI(await resultsManager.niAccountsPopulator(values));
+                    changeProvinces(await resultsManager.eligProvincesPopulator(values));
+                    changeTrxns(await resultsManager.eligibleTrxnsPopulator(values));
+                    changeProdModels(await resultsManager.eligibleProdModelsPopulator(values));
+                } else {
+                    console.log("No product exists by that name");
+                }
             });
         } else {
             console.log("No product has been entered");
@@ -126,7 +139,20 @@ function SearchProduct(props) {
 function ResultsArea(props) {
     let resultsManager = resultsBuilder();
     let topRows = resultsManager.resultsHeaderPopulator(props.fullResults);
-    console.log(props.cnAccs);
+    const [cnStatus, changeCNStatus] = React.useState("redStatusBackground");
+    const [niStatus, changeNIStatus] = React.useState("redStatusBackground");
+    const [provStatus, changeProvStatus] = React.useState("redStatusBackground");
+    const [transStatus, changeTransStatus] = React.useState("redStatusBackground");
+
+    async function checkStatus() {
+        changeCNStatus(await resultsManager.statusUpdate(props.cnAccs, "Yes"));
+        changeNIStatus(await resultsManager.statusUpdate(props.niAccs, "Yes"));
+        changeProvStatus(await resultsManager.statusUpdate(props.eligProvs, "Yes"));
+        changeTransStatus(await resultsManager.statusUpdate(props.eligTrxns, "Allowed"));
+    }
+
+    React.useEffect(checkStatus);
+
     let page = (
         <div id="resultsArea">
             <p><a>Product Search</a>{'>'}<a>Results</a></p>
@@ -374,7 +400,7 @@ function ResultsArea(props) {
                     </tr>
                     <tr>
                         <td><b>Eligible Provinces:</b></td>
-                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('provinces', 'hiddenProvinces'); }}>Toggle Section</button> <span id="provincesStatusButton" className="statusButton"></span></td>
+                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('provinces', 'hiddenProvinces'); }}>Toggle Section</button> <span id="provincesStatusButton" className={"statusButton " + provStatus}></span></td>
                     </tr>
                     <tr className="hiddenProvinces provinces">
                         <td>Alberta</td>
@@ -430,7 +456,7 @@ function ResultsArea(props) {
                     </tr>
                     <tr>
                         <td><b>Eligible Transactions:</b></td>
-                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('transactions', 'hiddenTransactions'); }}>Toggle Section</button> <span id="transactionsStatusButton" className="statusButton"></span></td>
+                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('transactions', 'hiddenTransactions'); }}>Toggle Section</button> <span id="transactionsStatusButton" className={"statusButton " + transStatus}></span></td>
                     </tr>
                     <tr className="hiddenTransactions transactions">
                         <td>Buy</td>
@@ -498,163 +524,163 @@ function ResultsArea(props) {
                     </tr>
                     <tr>
                         <td><b>Accounts - Client Name:</b></td>
-                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('cnaccounts', 'hiddenCnaccounts'); }}>Toggle Section</button> <span id="cnaccountsStatusButton" className="statusButton"></span></td>
+                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('cnaccounts', 'hiddenCnaccounts'); }}>Toggle Section</button> <span id="cnaccountsStatusButton" className={"statusButton " + cnStatus}></span></td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>Open</td>
-                        <td id="01_CNACC"></td>
+                        <td>{props.cnAccs["01"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RRSP</td>
-                        <td id="02_CNACC"></td>
+                        <td>{props.cnAccs["02"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RRIF</td>
-                        <td id="04_CNACC"></td>
+                        <td>{props.cnAccs["04"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RESP - Individual Plan</td>
-                        <td id="05_CNACC"></td>
+                        <td>{props.cnAccs["05"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RESP - Family Plan</td>
-                        <td id="06_CNACC"></td>
+                        <td>{props.cnAccs["06"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>DPSP</td>
-                        <td id="07_CNACC"></td>
+                        <td>{props.cnAccs["07"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RHOSP (Quebec Only)</td>
-                        <td id="08_CNACC"></td>
+                        <td>{props.cnAccs["08"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>LIF</td>
-                        <td id="10_CNACC"></td>
+                        <td>{props.cnAccs["10"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>LIRA</td>
-                        <td id="11_CNACC"></td>
+                        <td>{props.cnAccs["11"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>LRIF (Alberta, Saskatchewan)</td>
-                        <td id="12_CNACC"></td>
+                        <td>{props.cnAccs["12"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RRTF (Quebec Only)</td>
-                        <td id="13_CNACC"></td>
+                        <td>{props.cnAccs["13"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>PRIF</td>
-                        <td id="14_CNACC"></td>
+                        <td>{props.cnAccs["14"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RPP - Defined Benefit</td>
-                        <td id="15_CNACC"></td>
+                        <td>{props.cnAccs["15"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RPP - Defined Contribution</td>
-                        <td id="16_CNACC"></td>
+                        <td>{props.cnAccs["16"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>TFSA - Tax Free Savings Account</td>
-                        <td id="17_CNACC"></td>
+                        <td>{props.cnAccs["17"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RDSP - Registered Disability Savings Plan</td>
-                        <td id="18_CNACC"></td>
+                        <td>{props.cnAccs["18"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RLIF - Restricted Life Income Fund</td>
-                        <td id="19_CNACC"></td>
+                        <td>{props.cnAccs["19"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>RLSP - Restricted Locked-In Savings Plan</td>
-                        <td id="20_CNACC"></td>
+                        <td>{props.cnAccs["20"]}</td>
                     </tr>
                     <tr className="hiddenCnaccounts cnaccounts">
                         <td>IPP - Individual Pension Plan</td>
-                        <td id="21_CNACC"></td>
+                        <td>{props.cnAccs["21"]}</td>
                     </tr>
                     <tr>
                         <td><b>Accounts - Nom/Inter:</b></td>
-                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('niaccounts', 'hiddenNiaccounts'); }}>Toggle Section</button> <span id="niaccountsStatusButton" className="statusButton"></span></td>
+                        <td><button type="button" className="expandButton" onClick={async () => { await toggleDetails('niaccounts', 'hiddenNiaccounts'); }}>Toggle Section</button> <span id="niaccountsStatusButton" className={"statusButton " + niStatus}></span></td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>01</td>
-                        <td id="01_NIACC"></td>
+                        <td>Open</td>
+                        <td>{props.niAccs["01"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>02</td>
-                        <td id="02_NIACC"></td>
+                        <td>RRSP</td>
+                        <td>{props.niAccs["02"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>04</td>
-                        <td id="04_NIACC"></td>
+                        <td>RRIF</td>
+                        <td>{props.niAccs["04"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>05</td>
-                        <td id="05_NIACC"></td>
+                        <td>RESP - Individual Plan</td>
+                        <td>{props.niAccs["05"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>06</td>
-                        <td id="06_NIACC"></td>
+                        <td>RESP - Family Plan</td>
+                        <td>{props.niAccs["06"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>07</td>
-                        <td id="07_NIACC"></td>
+                        <td>DPSP</td>
+                        <td>{props.niAccs["07"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>08</td>
-                        <td id="08_NIACC"></td>
+                        <td>RHOSP (Quebec Only)</td>
+                        <td>{props.niAccs["08"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>10</td>
-                        <td id="10_NIACC"></td>
+                        <td>LIF</td>
+                        <td>{props.niAccs["10"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>11</td>
-                        <td id="11_NIACC"></td>
+                        <td>LIRA</td>
+                        <td>{props.niAccs["11"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>12</td>
-                        <td id="12_NIACC"></td>
+                        <td>LRIF (Alberta, Saskatchewan)</td>
+                        <td>{props.niAccs["12"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>13</td>
-                        <td id="13_NIACC"></td>
+                        <td>RRTF (Quebec only)</td>
+                        <td>{props.niAccs["13"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>14</td>
-                        <td id="14_NIACC"></td>
+                        <td>PRIF</td>
+                        <td>{props.niAccs["14"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>15</td>
-                        <td id="15_NIACC"></td>
+                        <td>RPP - Defined Benefit</td>
+                        <td>{props.niAccs["15"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>16</td>
-                        <td id="16_NIACC"></td>
+                        <td>RPP - Defined Contribution</td>
+                        <td>{props.niAccs["16"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>17</td>
-                        <td id="17_NIACC"></td>
+                        <td>TFSA - Tax Free Savings Account</td>
+                        <td>{props.niAccs["17"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>18</td>
-                        <td id="18_NIACC"></td>
+                        <td>RDSP - Registered Disability Savings Plan</td>
+                        <td>{props.niAccs["18"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>19</td>
-                        <td id="19_NIACC"></td>
+                        <td>RLIF - Restricted Life Income Fund</td>
+                        <td>{props.niAccs["19"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>20</td>
-                        <td id="20_NIACC"></td>
+                        <td>RLSP - Restricted Locked-In Savings Plan</td>
+                        <td>{props.niAccs["20"]}</td>
                     </tr>
                     <tr className="hiddenNiaccounts niaccounts">
-                        <td>21</td>
-                        <td id="21_NIACC"></td>
+                        <td>IPP - Individual Pension Plan</td>
+                        <td>{props.niAccs["21"]}</td>
                     </tr>
                     <tr>
                         <td><b>Dividend Options:</b></td>

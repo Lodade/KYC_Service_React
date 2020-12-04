@@ -1,4 +1,11 @@
 function Explore_Dashboard(props) {
+  let dashManager = dashboardManager();
+  let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
+  const [prodTypeChoice, changeProdType] = React.useState("");
+  const [loadTypeChoice, changeLoadType] = React.useState("");
+  const [classificationChoice, changeClassification] = React.useState("");
+  const [riskClassChoice, changeRiskClass] = React.useState("");
+  const [countTableContents, changeCountContents] = React.useState([]);
   let page = /*#__PURE__*/React.createElement("div", {
     id: "explore_dashboard"
   }, /*#__PURE__*/React.createElement("button", {
@@ -11,65 +18,77 @@ function Explore_Dashboard(props) {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      await dashboardController('mgmtCo', false);
+      changeCountContents(await dashManager.queryChooser('mgmtCo', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
     }
   }, "Mgmt Co."), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      await dashboardController('prodType', false);
+      changeCountContents(await dashManager.queryChooser('prodType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
     }
   }, "Prod. Type"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      await dashboardController('loadType', false);
+      changeCountContents(await dashManager.queryChooser('loadType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
     }
   }, "Load Type"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      await dashboardController('classification', false);
+      changeCountContents(await dashManager.queryChooser('classification', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
     }
   }, "Classification"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      await dashboardController('risk', false);
+      changeCountContents(await dashManager.queryChooser('risk', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
     }
   }, "Risk"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, "Management Company Dashboard")), /*#__PURE__*/React.createElement("form", null, /*#__PURE__*/React.createElement("label", {
     htmlFor: "PROD_TYPE"
-  }, "Prod. Type:"), /*#__PURE__*/React.createElement("select", {
+  }, "Prod. Type: "), /*#__PURE__*/React.createElement("select", {
     id: "prodTypeChooser",
-    name: "PROD_TYPE",
+    name: filterNames[0],
     size: "1"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "All")), /*#__PURE__*/React.createElement("label", {
+  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
+    name: filterNames[0],
+    hasEnum: true
+  })), /*#__PURE__*/React.createElement("label", {
     htmlFor: "LOAD_TYPE"
-  }, "Load Type:"), /*#__PURE__*/React.createElement("select", {
+  }, " Load Type: "), /*#__PURE__*/React.createElement("select", {
     id: "loadTypeChooser",
-    name: "LOAD_TYPE",
+    name: filterNames[1],
     size: "1"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "All")), /*#__PURE__*/React.createElement("label", {
+  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
+    name: filterNames[1],
+    hasEnum: true
+  })), /*#__PURE__*/React.createElement("label", {
     htmlFor: "CLASSIFICATION"
-  }, "Classification"), /*#__PURE__*/React.createElement("select", {
+  }, " Classification: "), /*#__PURE__*/React.createElement("select", {
     id: "classificationChooser",
-    name: "CLASSIFICATION",
+    name: filterNames[2],
     size: "1"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "All")), /*#__PURE__*/React.createElement("label", {
+  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
+    name: filterNames[2],
+    hasEnum: true
+  })), /*#__PURE__*/React.createElement("label", {
     htmlFor: "RISK_CLASS"
-  }, "Risk"), /*#__PURE__*/React.createElement("select", {
+  }, " Risk: "), /*#__PURE__*/React.createElement("select", {
     id: "riskChooser",
-    name: "RISK_CLASS",
+    name: filterNames[3],
     size: "1"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "All"))), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
+  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
+    name: filterNames[3],
+    hasEnum: false
+  }))), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
     id: "fundCountsArea"
   }, /*#__PURE__*/React.createElement("table", {
     className: "dashboardTable",
@@ -81,6 +100,25 @@ function Explore_Dashboard(props) {
     id: "fundDisplayTable"
   })));
   return page;
+}
+
+function FilterSet(props) {
+  let dashManager = dashboardManager();
+  let piece;
+  const [filterOptions, changeOptions] = React.useState([]);
+
+  async function filterOptionsGather() {
+    if (filterOptions[0] == null) {
+      changeOptions(await dashManager.filterListSetup(props.name, props.hasEnum));
+    }
+  }
+
+  React.useEffect(filterOptionsGather);
+  piece = filterOptions.map((row, index) => /*#__PURE__*/React.createElement("option", {
+    key: index,
+    value: row.queryValue
+  }, row.htmlText));
+  return piece;
 }
 
 function Explore_ViewProduct(props) {

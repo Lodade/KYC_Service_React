@@ -93,6 +93,7 @@
 .dashboardButton {
 	width: 7vw;
 	margin-bottom: 2vh;
+	margin-right: 1vw;
 }
 
 @media screen and (max-width: 600px) {

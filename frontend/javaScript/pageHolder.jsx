@@ -1,30 +1,51 @@
 function Explore_Dashboard(props) {
+    let dashManager = dashboardManager();
+    let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
+    const [prodTypeChoice, changeProdType] = React.useState("");
+    const [loadTypeChoice, changeLoadType] = React.useState("");
+    const [classificationChoice, changeClassification] = React.useState("");
+    const [riskClassChoice, changeRiskClass] = React.useState("");
+    const [countTableContents, changeCountContents] = React.useState([]);
     let page = (
         <div id="explore_dashboard">
             <button type="button" className="dashboardButton">Fundserv</button>
             <button type="button" className="dashboardButton">Fundata</button><br></br>
-            <button type="button" className="dashboardButton" onClick={async () => { await dashboardController('mgmtCo', false); }}>Mgmt Co.</button>
-            <button type="button" className="dashboardButton" onClick={async () => { await dashboardController('prodType', false); }}>Prod. Type</button>
-            <button type="button" className="dashboardButton" onClick={async () => { await dashboardController('loadType', false); }}>Load Type</button>
-            <button type="button" className="dashboardButton" onClick={async () => { await dashboardController('classification', false); }}>Classification</button>
-            <button type="button" className="dashboardButton" onClick={async () => { await dashboardController('risk', false); }}>Risk</button><br></br>
+            <button type="button" className="dashboardButton" onClick={async () => {
+                changeCountContents(await dashManager.queryChooser('mgmtCo', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+            }}>Mgmt Co.</button>
+            <button type="button" className="dashboardButton" onClick={async () => {
+                changeCountContents(await dashManager.queryChooser('prodType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+            }}>Prod. Type</button>
+            <button type="button" className="dashboardButton" onClick={async () => {
+                changeCountContents(await dashManager.queryChooser('loadType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+            }}>Load Type</button>
+            <button type="button" className="dashboardButton" onClick={async () => {
+                changeCountContents(await dashManager.queryChooser('classification', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+            }}>Classification</button>
+            <button type="button" className="dashboardButton" onClick={async () => {
+                changeCountContents(await dashManager.queryChooser('risk', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+            }}>Risk</button><br></br>
             <p><b>Management Company Dashboard</b></p>
             <form>
-                <label htmlFor="PROD_TYPE">Prod. Type:</label>
-                <select id="prodTypeChooser" name="PROD_TYPE" size="1">
+                <label htmlFor="PROD_TYPE">Prod. Type: </label>
+                <select id="prodTypeChooser" name={filterNames[0]} size="1">
                     <option value="">All</option>
+                    <FilterSet name={filterNames[0]} hasEnum={true} />
                 </select>
-                <label htmlFor="LOAD_TYPE">Load Type:</label>
-                <select id="loadTypeChooser" name="LOAD_TYPE" size="1">
+                <label htmlFor="LOAD_TYPE"> Load Type: </label>
+                <select id="loadTypeChooser" name={filterNames[1]} size="1">
                     <option value="">All</option>
+                    <FilterSet name={filterNames[1]} hasEnum={true} />
                 </select>
-                <label htmlFor="CLASSIFICATION">Classification</label>
-                <select id="classificationChooser" name="CLASSIFICATION" size="1">
+                <label htmlFor="CLASSIFICATION"> Classification: </label>
+                <select id="classificationChooser" name={filterNames[2]} size="1">
                     <option value="">All</option>
+                    <FilterSet name={filterNames[2]} hasEnum={true} />
                 </select>
-                <label htmlFor="RISK_CLASS">Risk</label>
-                <select id="riskChooser" name="RISK_CLASS" size="1">
+                <label htmlFor="RISK_CLASS"> Risk: </label>
+                <select id="riskChooser" name={filterNames[3]} size="1">
                     <option value="">All</option>
+                    <FilterSet name={filterNames[3]} hasEnum={false} />
                 </select>
             </form><br></br>
             <div id="fundCountsArea">
@@ -40,6 +61,26 @@ function Explore_Dashboard(props) {
         </div>
     );
     return page;
+}
+
+function FilterSet(props) {
+    let dashManager = dashboardManager();
+    let piece;
+    const [filterOptions, changeOptions] = React.useState([]);
+
+    async function filterOptionsGather() {
+        if (filterOptions[0] == null) {
+            changeOptions(await dashManager.filterListSetup(props.name, props.hasEnum));
+        }
+    }
+
+    React.useEffect(filterOptionsGather);
+
+    piece = filterOptions.map((row, index) =>
+        <option key={index} value={row.queryValue}>{row.htmlText}</option>
+    );
+
+    return piece;
 }
 
 function Explore_ViewProduct(props) {

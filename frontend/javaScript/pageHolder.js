@@ -99,6 +99,7 @@ function Explore_Dashboard(props) {
     className: "dashboardTable",
     id: "fundDisplayTable"
   })));
+  console.log(countTableContents);
   return page;
 }
 

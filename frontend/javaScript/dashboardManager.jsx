@@ -130,7 +130,7 @@ function dashboardManager() {
                     break;
             }
             let result = await queryProcess(query);
-            //await countsTablePopulator(result, headers, filterPart);
+            return result;
         }
     }
 }

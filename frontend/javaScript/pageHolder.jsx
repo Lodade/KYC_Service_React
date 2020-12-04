@@ -60,6 +60,9 @@ function Explore_Dashboard(props) {
             </div>
         </div>
     );
+
+    console.log(countTableContents);
+
     return page;
 }
 

@@ -11,11 +11,13 @@ function Explore_Dashboard(props) {
         FUND_COUNT: "",
         DISTINCT_FUND_COUNT: ""
     }]);
+    const [displayTableContents, changeDisplayContents] = React.useState([]);
     const [currentName, changeName] = React.useState("mgmtCo");
-    const [headers, changeHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
+    const [countHeaders, changeCountHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
+    const [displayHeaders, changeDisplayHeaders] = React.useState(["Management Code + Fund ID", "English Long Name"]);
 
     React.useEffect(() => {
-        if(firstRun == true){
+        if (firstRun == true) {
             dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
             changeRun(false);
         }
@@ -23,7 +25,14 @@ function Explore_Dashboard(props) {
 
     async function dashboardUpdate(name, filters) {
         changeCountContents(await dashManager.queryChooser(name, filterNames, filters));
-        changeHeaders(await dashManager.headerChooser(name));
+        changeCountHeaders(await dashManager.headerChooser(name));
+    }
+
+    async function displayTableUpdate(queryType, queryValue) {
+        let filterPart = await dashManager.filterGrab([prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice], filterNames);
+        let query = "SELECT CONCAT(MGMT_CODE, FUND_ID), ENG_LONG_NM FROM fsrv_prod f WHERE f." + queryType +
+            "=('" + queryValue + "')" + filterPart;
+        changeDisplayContents(await queryProcess(query));
     }
 
     async function changeFilter(value, type) {
@@ -76,37 +85,42 @@ function Explore_Dashboard(props) {
                 <label htmlFor="PROD_TYPE">Prod. Type: </label>
                 <select id="prodTypeChooser" name={filterNames[0]} size="1" onChange={async (e) => changeFilter(e.target.value, 0)}>
                     <option value="">All</option>
-                    <FilterSet name={filterNames[0]} hasEnum={true} />
+                    <FilterSet name={filterNames[0]} hasEnum={true} dashManage={dashManager} />
                 </select>
                 <label htmlFor="LOAD_TYPE"> Load Type: </label>
                 <select id="loadTypeChooser" name={filterNames[1]} size="1" onChange={async (e) => changeFilter(e.target.value, 1)}>
                     <option value="">All</option>
-                    <FilterSet name={filterNames[1]} hasEnum={true} />
+                    <FilterSet name={filterNames[1]} hasEnum={true} dashManage={dashManager} />
                 </select>
                 <label htmlFor="CLASSIFICATION"> Classification: </label>
                 <select id="classificationChooser" name={filterNames[2]} size="1" onChange={async (e) => changeFilter(e.target.value, 2)}>
                     <option value="">All</option>
-                    <FilterSet name={filterNames[2]} hasEnum={true} />
+                    <FilterSet name={filterNames[2]} hasEnum={true} dashManage={dashManager} />
                 </select>
                 <label htmlFor="RISK_CLASS"> Risk: </label>
                 <select id="riskChooser" name={filterNames[3]} size="1" onChange={async (e) => changeFilter(e.target.value, 3)}>
                     <option value="">All</option>
-                    <FilterSet name={filterNames[3]} hasEnum={false} />
+                    <FilterSet name={filterNames[3]} hasEnum={false} dashManage={dashManager} />
                 </select>
             </form><br></br>
             <div id="fundCountsArea">
                 <table className="dashboardTable" id="fundCountsTable">
                     <thead>
-                        <TableHeaders input={headers} />
+                        <TableHeaders input={countHeaders} />
                     </thead>
                     <tbody>
-                        <CountRows output={countTableContents} />
+                        <CountRows output={countTableContents} displayChange={displayTableUpdate} />
                     </tbody>
                 </table>
             </div><br></br>
             <div id="fundDisplayArea">
                 <table className="dashboardTable" id="fundDisplayTable">
-
+                    <thead>
+                        <TableHeaders input={displayHeaders} />
+                    </thead>
+                    <tbody>
+                        <DisplayRows output={displayTableContents} />
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -116,13 +130,12 @@ function Explore_Dashboard(props) {
 }
 
 function FilterSet(props) {
-    let dashManager = dashboardManager();
     let piece;
     const [filterOptions, changeOptions] = React.useState([]);
 
     async function filterOptionsGather() {
         if (filterOptions[0] == null) {
-            changeOptions(await dashManager.filterListSetup(props.name, props.hasEnum));
+            changeOptions(await props.dashManage.filterListSetup(props.name, props.hasEnum));
         }
     }
 
@@ -147,15 +160,17 @@ function TableHeaders(props) {
 
 function CountRows(props) {
     let piece;
+    let currentKeys = Object.keys(props.output[0]);
+    piece = (props.output).map((row, index) =>
+        <tr key={index}>
+            <RowContent input={objToArray(row)} type="linkedContent" displayFunction={props.displayChange} queryType={currentKeys[0]} />
+        </tr>
+    );
+    return piece;
+}
 
-    function objToArray(object) {
-        let keys = Object.keys(object);
-        let output = [];
-        for (let i = 0; i < keys.length; i++) {
-            output[i] = object[keys[i]];
-        }
-        return output;
-    }
+function DisplayRows(props) {
+    let piece;
 
     piece = (props.output).map((row, index) =>
         <tr key={index}>
@@ -163,6 +178,15 @@ function CountRows(props) {
         </tr>
     );
     return piece;
+}
+
+function objToArray(object) {
+    let keys = Object.keys(object);
+    let output = [];
+    for (let i = 0; i < keys.length; i++) {
+        output[i] = object[keys[i]];
+    }
+    return output;
 }
 
 function RowContent(props) {
@@ -174,6 +198,10 @@ function RowContent(props) {
     } else if (props.type == "header") {
         piece = (props.input).map((row, index) =>
             <th key={index}>{row}</th>
+        );
+    } else if (props.type == "linkedContent") {
+        piece = (props.input).map((row, index) =>
+            <td key={index}><a onClick={async () => props.displayFunction(props.queryType, props.input[0])}>{row}</a></td>
         );
     }
     return piece;

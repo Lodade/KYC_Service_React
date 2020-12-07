@@ -11,8 +11,10 @@ function Explore_Dashboard(props) {
     FUND_COUNT: "",
     DISTINCT_FUND_COUNT: ""
   }]);
+  const [displayTableContents, changeDisplayContents] = React.useState([]);
   const [currentName, changeName] = React.useState("mgmtCo");
-  const [headers, changeHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
+  const [countHeaders, changeCountHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
+  const [displayHeaders, changeDisplayHeaders] = React.useState(["Management Code + Fund ID", "English Long Name"]);
   React.useEffect(() => {
     if (firstRun == true) {
       dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
@@ -22,7 +24,13 @@ function Explore_Dashboard(props) {
 
   async function dashboardUpdate(name, filters) {
     changeCountContents(await dashManager.queryChooser(name, filterNames, filters));
-    changeHeaders(await dashManager.headerChooser(name));
+    changeCountHeaders(await dashManager.headerChooser(name));
+  }
+
+  async function displayTableUpdate(queryType, queryValue) {
+    let filterPart = await dashManager.filterGrab([prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice], filterNames);
+    let query = "SELECT CONCAT(MGMT_CODE, FUND_ID), ENG_LONG_NM FROM fsrv_prod f WHERE f." + queryType + "=('" + queryValue + "')" + filterPart;
+    changeDisplayContents(await queryProcess(query));
   }
 
   async function changeFilter(value, type) {
@@ -103,7 +111,8 @@ function Explore_Dashboard(props) {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
     name: filterNames[0],
-    hasEnum: true
+    hasEnum: true,
+    dashManage: dashManager
   })), /*#__PURE__*/React.createElement("label", {
     htmlFor: "LOAD_TYPE"
   }, " Load Type: "), /*#__PURE__*/React.createElement("select", {
@@ -115,7 +124,8 @@ function Explore_Dashboard(props) {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
     name: filterNames[1],
-    hasEnum: true
+    hasEnum: true,
+    dashManage: dashManager
   })), /*#__PURE__*/React.createElement("label", {
     htmlFor: "CLASSIFICATION"
   }, " Classification: "), /*#__PURE__*/React.createElement("select", {
@@ -127,7 +137,8 @@ function Explore_Dashboard(props) {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
     name: filterNames[2],
-    hasEnum: true
+    hasEnum: true,
+    dashManage: dashManager
   })), /*#__PURE__*/React.createElement("label", {
     htmlFor: "RISK_CLASS"
   }, " Risk: "), /*#__PURE__*/React.createElement("select", {
@@ -139,33 +150,38 @@ function Explore_Dashboard(props) {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
     name: filterNames[3],
-    hasEnum: false
+    hasEnum: false,
+    dashManage: dashManager
   }))), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
     id: "fundCountsArea"
   }, /*#__PURE__*/React.createElement("table", {
     className: "dashboardTable",
     id: "fundCountsTable"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement(TableHeaders, {
-    input: headers
+    input: countHeaders
   })), /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement(CountRows, {
-    output: countTableContents
+    output: countTableContents,
+    displayChange: displayTableUpdate
   })))), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
     id: "fundDisplayArea"
   }, /*#__PURE__*/React.createElement("table", {
     className: "dashboardTable",
     id: "fundDisplayTable"
-  })));
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement(TableHeaders, {
+    input: displayHeaders
+  })), /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement(DisplayRows, {
+    output: displayTableContents
+  })))));
   return page;
 }
 
 function FilterSet(props) {
-  let dashManager = dashboardManager();
   let piece;
   const [filterOptions, changeOptions] = React.useState([]);
 
   async function filterOptionsGather() {
     if (filterOptions[0] == null) {
-      changeOptions(await dashManager.filterListSetup(props.name, props.hasEnum));
+      changeOptions(await props.dashManage.filterListSetup(props.name, props.hasEnum));
     }
   }
 
@@ -188,18 +204,20 @@ function TableHeaders(props) {
 
 function CountRows(props) {
   let piece;
+  let currentKeys = Object.keys(props.output[0]);
+  piece = props.output.map((row, index) => /*#__PURE__*/React.createElement("tr", {
+    key: index
+  }, /*#__PURE__*/React.createElement(RowContent, {
+    input: objToArray(row),
+    type: "linkedContent",
+    displayFunction: props.displayChange,
+    queryType: currentKeys[0]
+  })));
+  return piece;
+}
 
-  function objToArray(object) {
-    let keys = Object.keys(object);
-    let output = [];
-
-    for (let i = 0; i < keys.length; i++) {
-      output[i] = object[keys[i]];
-    }
-
-    return output;
-  }
-
+function DisplayRows(props) {
+  let piece;
   piece = props.output.map((row, index) => /*#__PURE__*/React.createElement("tr", {
     key: index
   }, /*#__PURE__*/React.createElement(RowContent, {
@@ -207,6 +225,17 @@ function CountRows(props) {
     type: "content"
   })));
   return piece;
+}
+
+function objToArray(object) {
+  let keys = Object.keys(object);
+  let output = [];
+
+  for (let i = 0; i < keys.length; i++) {
+    output[i] = object[keys[i]];
+  }
+
+  return output;
 }
 
 function RowContent(props) {
@@ -220,6 +249,12 @@ function RowContent(props) {
     piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("th", {
       key: index
     }, row));
+  } else if (props.type == "linkedContent") {
+    piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("td", {
+      key: index
+    }, /*#__PURE__*/React.createElement("a", {
+      onClick: async () => props.displayFunction(props.queryType, props.input[0])
+    }, row)));
   }
 
   return piece;

@@ -29,6 +29,10 @@ function dashboardManager() {
   }
 
   return {
+    filterGrab: async function (choices, filters) {
+      let result = await queryFilterAssembler(choices, filters, true);
+      return result;
+    },
     filterListSetup: async function (name, hasEnum) {
       let query;
       let filterList = [];

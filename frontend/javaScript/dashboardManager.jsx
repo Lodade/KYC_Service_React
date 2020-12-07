@@ -29,6 +29,10 @@ function dashboardManager() {
         return statement;
     }
     return {
+        filterGrab: async function(choices, filters){
+            let result = await queryFilterAssembler(choices, filters, true);
+            return result;
+        },
         filterListSetup: async function (name, hasEnum) {
             let query;
             let filterList = [];
@@ -54,9 +58,9 @@ function dashboardManager() {
             }
             return filterList;
         },
-        headerChooser: async function (buttonType){
+        headerChooser: async function (buttonType) {
             let headers = [];
-            switch (buttonType){
+            switch (buttonType) {
                 case "mgmtCo":
                     headers = ["Mgmt Code", "Fund Count", "Distinct Fund Count"];
                     break;
@@ -147,9 +151,9 @@ function dashboardManager() {
                     }
 
                     copy = copy.replace(/\sf\W/g, " f2.");
-                    query = "SELECT DISTINCT(RISK_CLASS)," + " (SELECT COUNT(*) FROM fsrv_prod f2 WHERE f2.RISK_CLASS=f.RISK_CLASS" + copy + 
-                    ") FUND_COUNT," + " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.RISK_CLASS=f.RISK_CLASS" + copy + 
-                    ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f" + filterPart;
+                    query = "SELECT DISTINCT(RISK_CLASS)," + " (SELECT COUNT(*) FROM fsrv_prod f2 WHERE f2.RISK_CLASS=f.RISK_CLASS" + copy +
+                        ") FUND_COUNT," + " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.RISK_CLASS=f.RISK_CLASS" + copy +
+                        ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f" + filterPart;
                     headers = ["Risk Class", "Fund Count", "Distinct Fund Count"];
 
                     break;

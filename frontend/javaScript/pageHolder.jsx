@@ -1,56 +1,107 @@
 function Explore_Dashboard(props) {
     let dashManager = dashboardManager();
     let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
+    const [firstRun, changeRun] = React.useState(true);
     const [prodTypeChoice, changeProdType] = React.useState("");
     const [loadTypeChoice, changeLoadType] = React.useState("");
     const [classificationChoice, changeClassification] = React.useState("");
     const [riskClassChoice, changeRiskClass] = React.useState("");
-    const [countTableContents, changeCountContents] = React.useState([]);
+    const [countTableContents, changeCountContents] = React.useState([{
+        MGMT_CODE: "",
+        FUND_COUNT: "",
+        DISTINCT_FUND_COUNT: ""
+    }]);
+    const [currentName, changeName] = React.useState("mgmtCo");
+    const [headers, changeHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
+
+    React.useEffect(() => {
+        if(firstRun == true){
+            dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
+            changeRun(false);
+        }
+    });
+
+    async function dashboardUpdate(name, filters) {
+        changeCountContents(await dashManager.queryChooser(name, filterNames, filters));
+        changeHeaders(await dashManager.headerChooser(name));
+    }
+
+    async function changeFilter(value, type) {
+        switch (type) {
+            case 0:
+                changeProdType(value);
+                await dashboardUpdate(currentName, [value, loadTypeChoice, classificationChoice, riskClassChoice]);
+                break;
+            case 1:
+                changeLoadType(value);
+                await dashboardUpdate(currentName, [prodTypeChoice, value, classificationChoice, riskClassChoice]);
+                break;
+            case 2:
+                changeClassification(value);
+                await dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, value, riskClassChoice]);
+                break;
+            case 3:
+                changeRiskClass(value);
+                await dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, value]);
+                break;
+        }
+    }
+
     let page = (
         <div id="explore_dashboard">
             <button type="button" className="dashboardButton">Fundserv</button>
             <button type="button" className="dashboardButton">Fundata</button><br></br>
             <button type="button" className="dashboardButton" onClick={async () => {
-                changeCountContents(await dashManager.queryChooser('mgmtCo', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+                changeName("mgmtCo");
+                await dashboardUpdate("mgmtCo", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
             }}>Mgmt Co.</button>
             <button type="button" className="dashboardButton" onClick={async () => {
-                changeCountContents(await dashManager.queryChooser('prodType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+                changeName("prodType");
+                await dashboardUpdate("prodType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
             }}>Prod. Type</button>
             <button type="button" className="dashboardButton" onClick={async () => {
-                changeCountContents(await dashManager.queryChooser('loadType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+                changeName("loadType");
+                await dashboardUpdate("loadType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
             }}>Load Type</button>
             <button type="button" className="dashboardButton" onClick={async () => {
-                changeCountContents(await dashManager.queryChooser('classification', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+                changeName("classification");
+                await dashboardUpdate("classification", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
             }}>Classification</button>
             <button type="button" className="dashboardButton" onClick={async () => {
-                changeCountContents(await dashManager.queryChooser('risk', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+                changeName("risk");
+                await dashboardUpdate("risk", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
             }}>Risk</button><br></br>
             <p><b>Management Company Dashboard</b></p>
             <form>
                 <label htmlFor="PROD_TYPE">Prod. Type: </label>
-                <select id="prodTypeChooser" name={filterNames[0]} size="1">
+                <select id="prodTypeChooser" name={filterNames[0]} size="1" onChange={async (e) => changeFilter(e.target.value, 0)}>
                     <option value="">All</option>
                     <FilterSet name={filterNames[0]} hasEnum={true} />
                 </select>
                 <label htmlFor="LOAD_TYPE"> Load Type: </label>
-                <select id="loadTypeChooser" name={filterNames[1]} size="1">
+                <select id="loadTypeChooser" name={filterNames[1]} size="1" onChange={async (e) => changeFilter(e.target.value, 1)}>
                     <option value="">All</option>
                     <FilterSet name={filterNames[1]} hasEnum={true} />
                 </select>
                 <label htmlFor="CLASSIFICATION"> Classification: </label>
-                <select id="classificationChooser" name={filterNames[2]} size="1">
+                <select id="classificationChooser" name={filterNames[2]} size="1" onChange={async (e) => changeFilter(e.target.value, 2)}>
                     <option value="">All</option>
                     <FilterSet name={filterNames[2]} hasEnum={true} />
                 </select>
                 <label htmlFor="RISK_CLASS"> Risk: </label>
-                <select id="riskChooser" name={filterNames[3]} size="1">
+                <select id="riskChooser" name={filterNames[3]} size="1" onChange={async (e) => changeFilter(e.target.value, 3)}>
                     <option value="">All</option>
                     <FilterSet name={filterNames[3]} hasEnum={false} />
                 </select>
             </form><br></br>
             <div id="fundCountsArea">
                 <table className="dashboardTable" id="fundCountsTable">
-
+                    <thead>
+                        <TableHeaders input={headers} />
+                    </thead>
+                    <tbody>
+                        <CountRows output={countTableContents} />
+                    </tbody>
                 </table>
             </div><br></br>
             <div id="fundDisplayArea">
@@ -60,8 +111,6 @@ function Explore_Dashboard(props) {
             </div>
         </div>
     );
-
-    console.log(countTableContents);
 
     return page;
 }
@@ -83,6 +132,50 @@ function FilterSet(props) {
         <option key={index} value={row.queryValue}>{row.htmlText}</option>
     );
 
+    return piece;
+}
+
+function TableHeaders(props) {
+    let piece;
+    piece = (
+        <tr>
+            <RowContent input={props.input} type="header" />
+        </tr>
+    );
+    return piece;
+}
+
+function CountRows(props) {
+    let piece;
+
+    function objToArray(object) {
+        let keys = Object.keys(object);
+        let output = [];
+        for (let i = 0; i < keys.length; i++) {
+            output[i] = object[keys[i]];
+        }
+        return output;
+    }
+
+    piece = (props.output).map((row, index) =>
+        <tr key={index}>
+            <RowContent input={objToArray(row)} type="content" />
+        </tr>
+    );
+    return piece;
+}
+
+function RowContent(props) {
+    let piece;
+    if (props.type == "content") {
+        piece = (props.input).map((row, index) =>
+            <td key={index}>{row}</td>
+        );
+    } else if (props.type == "header") {
+        piece = (props.input).map((row, index) =>
+            <th key={index}>{row}</th>
+        );
+    }
     return piece;
 }
 

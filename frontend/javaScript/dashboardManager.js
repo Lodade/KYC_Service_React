@@ -59,6 +59,33 @@ function dashboardManager() {
 
       return filterList;
     },
+    headerChooser: async function (buttonType) {
+      let headers = [];
+
+      switch (buttonType) {
+        case "mgmtCo":
+          headers = ["Mgmt Code", "Fund Count", "Distinct Fund Count"];
+          break;
+
+        case "prodType":
+          headers = ["Product Type", "Full Name", "Fund Count", "Distinct Fund Count"];
+          break;
+
+        case "loadType":
+          headers = ["Load Type", "Full Name", "Fund Count", "Distinct Fund Count"];
+          break;
+
+        case "classification":
+          headers = ["Classification", "Full Name", "Fund Count", "Distinct Fund Count"];
+          break;
+
+        case "risk":
+          headers = ["Risk Class", "Fund Count", "Distinct Fund Count"];
+          break;
+      }
+
+      return headers;
+    },
     queryChooser: async function (buttonType, filters, choices) {
       let query;
       let headers;

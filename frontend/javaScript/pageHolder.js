@@ -1,11 +1,54 @@
 function Explore_Dashboard(props) {
   let dashManager = dashboardManager();
   let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
+  const [firstRun, changeRun] = React.useState(true);
   const [prodTypeChoice, changeProdType] = React.useState("");
   const [loadTypeChoice, changeLoadType] = React.useState("");
   const [classificationChoice, changeClassification] = React.useState("");
   const [riskClassChoice, changeRiskClass] = React.useState("");
-  const [countTableContents, changeCountContents] = React.useState([]);
+  const [countTableContents, changeCountContents] = React.useState([{
+    MGMT_CODE: "",
+    FUND_COUNT: "",
+    DISTINCT_FUND_COUNT: ""
+  }]);
+  const [currentName, changeName] = React.useState("mgmtCo");
+  const [headers, changeHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
+  React.useEffect(() => {
+    if (firstRun == true) {
+      dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
+      changeRun(false);
+    }
+  });
+
+  async function dashboardUpdate(name, filters) {
+    changeCountContents(await dashManager.queryChooser(name, filterNames, filters));
+    changeHeaders(await dashManager.headerChooser(name));
+  }
+
+  async function changeFilter(value, type) {
+    switch (type) {
+      case 0:
+        changeProdType(value);
+        await dashboardUpdate(currentName, [value, loadTypeChoice, classificationChoice, riskClassChoice]);
+        break;
+
+      case 1:
+        changeLoadType(value);
+        await dashboardUpdate(currentName, [prodTypeChoice, value, classificationChoice, riskClassChoice]);
+        break;
+
+      case 2:
+        changeClassification(value);
+        await dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, value, riskClassChoice]);
+        break;
+
+      case 3:
+        changeRiskClass(value);
+        await dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, value]);
+        break;
+    }
+  }
+
   let page = /*#__PURE__*/React.createElement("div", {
     id: "explore_dashboard"
   }, /*#__PURE__*/React.createElement("button", {
@@ -18,38 +61,44 @@ function Explore_Dashboard(props) {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      changeCountContents(await dashManager.queryChooser('mgmtCo', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+      changeName("mgmtCo");
+      await dashboardUpdate("mgmtCo", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
     }
   }, "Mgmt Co."), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      changeCountContents(await dashManager.queryChooser('prodType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+      changeName("prodType");
+      await dashboardUpdate("prodType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
     }
   }, "Prod. Type"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      changeCountContents(await dashManager.queryChooser('loadType', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+      changeName("loadType");
+      await dashboardUpdate("loadType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
     }
   }, "Load Type"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      changeCountContents(await dashManager.queryChooser('classification', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+      changeName("classification");
+      await dashboardUpdate("classification", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
     }
   }, "Classification"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "dashboardButton",
     onClick: async () => {
-      changeCountContents(await dashManager.queryChooser('risk', filterNames, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]));
+      changeName("risk");
+      await dashboardUpdate("risk", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
     }
   }, "Risk"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, "Management Company Dashboard")), /*#__PURE__*/React.createElement("form", null, /*#__PURE__*/React.createElement("label", {
     htmlFor: "PROD_TYPE"
   }, "Prod. Type: "), /*#__PURE__*/React.createElement("select", {
     id: "prodTypeChooser",
     name: filterNames[0],
-    size: "1"
+    size: "1",
+    onChange: async e => changeFilter(e.target.value, 0)
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
@@ -60,7 +109,8 @@ function Explore_Dashboard(props) {
   }, " Load Type: "), /*#__PURE__*/React.createElement("select", {
     id: "loadTypeChooser",
     name: filterNames[1],
-    size: "1"
+    size: "1",
+    onChange: async e => changeFilter(e.target.value, 1)
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
@@ -71,7 +121,8 @@ function Explore_Dashboard(props) {
   }, " Classification: "), /*#__PURE__*/React.createElement("select", {
     id: "classificationChooser",
     name: filterNames[2],
-    size: "1"
+    size: "1",
+    onChange: async e => changeFilter(e.target.value, 2)
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
@@ -82,7 +133,8 @@ function Explore_Dashboard(props) {
   }, " Risk: "), /*#__PURE__*/React.createElement("select", {
     id: "riskChooser",
     name: filterNames[3],
-    size: "1"
+    size: "1",
+    onChange: async e => changeFilter(e.target.value, 3)
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
@@ -93,13 +145,16 @@ function Explore_Dashboard(props) {
   }, /*#__PURE__*/React.createElement("table", {
     className: "dashboardTable",
     id: "fundCountsTable"
-  })), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement(TableHeaders, {
+    input: headers
+  })), /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement(CountRows, {
+    output: countTableContents
+  })))), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
     id: "fundDisplayArea"
   }, /*#__PURE__*/React.createElement("table", {
     className: "dashboardTable",
     id: "fundDisplayTable"
   })));
-  console.log(countTableContents);
   return page;
 }
 
@@ -119,6 +174,54 @@ function FilterSet(props) {
     key: index,
     value: row.queryValue
   }, row.htmlText));
+  return piece;
+}
+
+function TableHeaders(props) {
+  let piece;
+  piece = /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(RowContent, {
+    input: props.input,
+    type: "header"
+  }));
+  return piece;
+}
+
+function CountRows(props) {
+  let piece;
+
+  function objToArray(object) {
+    let keys = Object.keys(object);
+    let output = [];
+
+    for (let i = 0; i < keys.length; i++) {
+      output[i] = object[keys[i]];
+    }
+
+    return output;
+  }
+
+  piece = props.output.map((row, index) => /*#__PURE__*/React.createElement("tr", {
+    key: index
+  }, /*#__PURE__*/React.createElement(RowContent, {
+    input: objToArray(row),
+    type: "content"
+  })));
+  return piece;
+}
+
+function RowContent(props) {
+  let piece;
+
+  if (props.type == "content") {
+    piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("td", {
+      key: index
+    }, row));
+  } else if (props.type == "header") {
+    piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("th", {
+      key: index
+    }, row));
+  }
+
   return piece;
 }
 

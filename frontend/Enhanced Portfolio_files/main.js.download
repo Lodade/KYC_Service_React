@@ -1,0 +1,2523 @@
+/**
+ *
+ * Script file includes layout-specific scripts for G3 UI.
+ * Keep the scripts cross-browser!
+ */
+
+/* shortcut function to access element by id */
+function elem(name) {
+    return document.getElementById(name);
+}
+var LEFT_PANE_HEIGHT; //set in onload event; used in onresize event
+var allowRecreateInput; //dummy var; must be set in a component that whants to recreate user input; see parseAndSub() comments
+var ajaxConcurrentCallsCount = 0;
+
+window.onbeforeunload = function () {
+    showPageLoadWarningLabel();
+}
+
+/**
+ * Makes page reload indicator div visible
+ */
+function showPageLoadWarningLabel() {
+    ajaxConcurrentCallsCount++;
+    if (typeof allowPageLoadWarningLabel != 'undefined') {
+        try {
+            if (allowPageLoadWarningLabel) {
+                elem('pageLoadWarningLabel').className = "";
+            }
+        } catch (e) {
+        }
+    }
+}
+
+/**
+ * Hides page reload indicator div
+ */
+function hidePageLoadWarningLabel() {
+    ajaxConcurrentCallsCount--;
+    try {
+        if (ajaxConcurrentCallsCount <= 0) {
+            elem('pageLoadWarningLabel').className = "hidden";
+        }
+    } catch (e) {
+    }
+}
+
+/**
+ * force browser to hide the page load warning message box regardless of the current value of ajaxConcurrentCallsCount
+ */
+function forceHidePageLoadWarningLabel() {
+    ajaxConcurrentCallsCount = 1;
+    hidePageLoadWarningLabel();
+}
+
+/**
+ * Makes page reload indicator div visible for COB popups
+ */
+function showPageLoadWarningLabelPopupCOB() {
+    ajaxConcurrentCallsCount++;
+    if (typeof allowPageLoadWarningLabelPopupCOB != 'undefined') {
+        try {
+            if (allowPageLoadWarningLabelPopupCOB) {
+                elem('pageLoadWarningLabelPopup').className = "";
+            }
+        } catch (e) {
+        }
+    }
+}
+
+/**
+ * Hides page reload indicator div for COB popups
+ */
+function hidePageLoadWarningLabelPopupCOB() {
+    ajaxConcurrentCallsCount--;
+    try {
+        if (ajaxConcurrentCallsCount <= 0) {
+            elem('pageLoadWarningLabelPopup').className = "hidden";
+        }
+    } catch (e) {
+    }
+}
+
+/**
+ * Make sure that we introduce onload function properly when dojo is around.
+ * Otherwise we won't be able to use its facilities: dojo overrides window onload event.
+ */
+function onresize_new() {
+    var leftSidebarHeight = elem("left-sidebar").offsetHeight -
+        elem("buttonBar").offsetHeight -
+        elem("footer").offsetHeight -
+        elem("header").offsetHeight;
+    var tmp = leftSidebarHeight - LEFT_PANE_HEIGHT;
+    var DEFAULT_MARGIN = 10;	//smallest top-margin for Task Menu
+    var taskMenuTopMargin = tmp >= DEFAULT_MARGIN ? tmp + "px" : DEFAULT_MARGIN + "px";
+
+    //increase top margin to have Task Menu trail on bottom of left sidebar
+    try {
+        elem("taskMenu").style.marginTop = taskMenuTopMargin;
+    } catch (e) {
+        //task menu isn't defined on page
+    }
+
+    //show scroll buttons when window height is too small
+    if (leftSidebarHeight < LEFT_PANE_HEIGHT) {
+        var diff = leftSidebarHeight - elem("leftPane").offsetHeight;// - elem("buttonDown").offsetHeight;
+        //display top scroll button only
+        //if menu isn't all the way at the top
+        elem("buttonUp").style.display = leftPaneTop == 0 ? "none" : "block";
+        elem("buttonDown").style.display = leftPaneTop <= diff ? "none" : "block";//"block";        
+
+        //pull the menu down to avoid gap between scroll-down
+        //button and the menu when window height is increased
+        if (leftPaneTop < diff) {
+            elem("leftPane").style.top = leftPaneTop = diff;
+            //elem("buttonDown").style.display = "none";
+        }
+    } else {	//hide scroll buttons when menu is fully shown
+        elem("buttonUp").style.display = "none";
+        elem("buttonDown").style.display = "none";
+        elem("leftPane").style.top = leftPaneTop = 0;
+    }
+}
+
+var IS_DOJO_DEFINED = typeof dojo != "undefined";
+if (!IS_DOJO_DEFINED) {
+    window.onload = function () {
+        onLoadHandler();
+    }
+} else { //initializers in dojo's context
+    dojo.addOnLoad(function () {
+        onLoadHandler(); //attach main listener
+
+        try { //show debugging console; set listener to clear console on double-click
+            var debugConsole = dojo.byId("dojoDebug");
+            if (djConfig.isDebug && debugConsole != null) {
+                debugConsole.style.display = "block";
+
+                var clearMessage = "NOTE: Double-click to clear contents...";
+                dojo.debug(clearMessage);
+                dojo.event.connect(debugConsole, "ondblclick", function () {
+                    debugConsole.innerHTML = clearMessage
+                });
+            }
+        } catch (e) {/*safe to ignore*/
+        }
+
+        //initialize all managers
+        mainAdviceManager.init(); //weave all common AOP advice
+        mainEventManager.init(); //add all event handlers
+    });
+
+    /* Introduce a debugging listener for topic publishing, if not suppressed.
+     * Controlled by isHideEvents boolean property of djConfig
+     */
+    if (!djConfig.isHideEvents) {
+        dojo.event.connect(dojo.event.topic, "publish", function (topicName) {
+            dojo.debug("EVENT FIRED: \"" + topicName + "\"")
+        });
+    }
+}
+
+/**
+ * Main onload handler. Calls common functions, and structures layout.
+ */
+function onLoadHandler_new() {
+    LEFT_PANE_HEIGHT = elem("leftPane").offsetHeight;
+
+    //make sure task menu is positioned right,
+    //and scroll buttons are in place
+    onresize_new();
+    //call function to get the network indicator image and title, if it exists
+    if (typeof getNetworkIndicator == 'function') {
+        getNetworkIndicator();
+    }
+
+    //show task menu after it's been positioned correctly
+    //so there's no perception of a "jump"
+    //that means that initially visibility is set to 'hidden' in CSS for #taskMenu
+    try {
+        elem("taskMenu").style.visibility = "visible";
+    } catch (e) {
+        //task menu isn't defined on page
+    }
+
+    //store all form elements with required and invalid CSS class
+    //for quick navigation via ctrl+q and ctrl+shift+q
+    findAllRequireds();
+    focusOnDemand(); //focus on the first element that demands it
+
+    //if page contained validation/action errors, recreate user input
+    //both allowRecreateInput and parseAndSub() must be defined inside the component
+    //if the page requires additional processing required after parseAndSub, then call
+    //performPostParseAndSub and if it is defined in the page, it will be performed
+    if (allowRecreateInput) {
+        try {
+            parseAndSub();
+
+            //fire a UI logical event after validation message is displayed, only iff it is displayed
+            if (IS_DOJO_DEFINED) {
+                mainEventManager.publishPageEvent(mainPageManager.EVENT_AFTER_VALIDATION_NOTICE);
+            }
+        } catch (e) {
+        }
+
+        if (typeof performPostParseAndSub == 'function') {
+            try{performPostParseAndSub();}catch (e){}
+        }
+    }
+
+    //if page defined an array that outlines the sequence of automatic focussing,
+    //then perform the logic. See EWMS-1514 for details
+
+    stepThroughFocusItems();
+}
+
+function onLoadHandler() {
+    LEFT_PANE_HEIGHT = null;
+    var leftPane = elem("leftPane");
+    if (leftPane != null && leftPane !== 'undefined') {
+        LEFT_PANE_HEIGHT = leftPane.offsetHeight;
+    }
+    //make sure task menu is positioned right,
+    //and scroll buttons are in place
+
+    resizeHandler();
+
+    //call function to get the network indicator image and title, if it exists
+    if (typeof getNetworkIndicator == 'function') {
+        getNetworkIndicator();
+    }
+
+    //show task menu after it's been positioned correctly
+    //so there's no perception of a "jump"
+    //that means that initially visibility is set to 'hidden' in CSS for #taskMenu
+    try {
+        elem("taskMenu").style.visibility = "visible";
+    } catch (e) {
+        //task menu isn't defined on page
+    }
+
+    //store all form elements with required and invalid CSS class
+    //for quick navigation via ctrl+q and ctrl+shift+q
+    findAllRequireds();
+    focusOnDemand(); //focus on the first element that demands it
+
+    //if page contained validation/action errors, recreate user input
+    //both allowRecreateInput and parseAndSub() must be defined inside the component
+    //if the page requires additional processing required after parseAndSub, then call
+    //performPostParseAndSub and if it is defined in the page, it will be performed
+    if (allowRecreateInput) {
+        try {
+            parseAndSub();
+
+            //fire a UI logical event after validation message is displayed, only iff it is displayed
+            if (IS_DOJO_DEFINED) {
+                mainEventManager.publishPageEvent(mainPageManager.EVENT_AFTER_VALIDATION_NOTICE);
+            }
+        } catch (e) {
+        }
+
+        if (typeof performPostParseAndSub == 'function') {
+            try{performPostParseAndSub();}catch(e){}
+        }
+    }
+
+    //if page defined an array that outlines the sequence of automatic focussing,
+    //then perform the logic. See EWMS-1514 for details
+
+    stepThroughFocusItems();
+}
+
+/**
+ * The function will iterate through input, textarea, and select elements
+ * on the page looking for the attribute (as specified by ATTRIBUTE_NEED_FOCUS)
+ * that indicates that the element request caret focus; and will focus that
+ * element accordingly. The attribute need simply be defined in the tag,
+ * the value is ignored.
+ */
+var ATTRIBUTE_NEED_FOCUS = "wantfocus";
+var exportInProgress = false;
+var reportInProgress = false;
+var useCustomFocusOrder = false; //Using
+var ALL_INPUT_ELEMENTS = document.getElementsByTagName("input");
+var ALL_SELECT_ELEMENTS = document.getElementsByTagName("select");
+
+function focusOnDemand() {
+    // if the report is being generated, don't try to set focus on the main window
+    // since the popup window will be buried underneath it.
+    if (reportInProgress) {
+        return;
+    }
+    if (exportInProgress) {
+        return;
+    }
+
+    var inputElements = new Array();
+    inputElements[0] = ALL_INPUT_ELEMENTS;
+    inputElements[1] = document.getElementsByTagName("textarea");
+    inputElements[2] = document.getElementsByTagName("select");
+    inputElements[3] = document.getElementsByTagName("a");
+    for (var i = 0; i < inputElements.length; ++i) {
+        for (var j = 0; j < inputElements[i].length; ++j) {
+            if (inputElements[i][j].getAttribute(ATTRIBUTE_NEED_FOCUS)) {
+                try {
+                    inputElements[i][j].focus();
+                    inputElements[i][j].select();
+                } catch (e) {
+                }
+
+                return;
+            }
+        }
+    }
+}
+
+var REQUIREDS; //array of all elements whose CSS class is 'required' or 'invalid'
+var lastRequired = -1; //the last one selected by user
+/**
+ * Finds all input, textarea, and select elements with 'required' and 'invalid'
+ * CSS class for quick navigation using ctrl+q and ctrl+shift+q hotkeys
+ */
+function findAllRequireds() {
+    REQUIREDS = new Array();
+
+    pushRequireds(document.getElementsByTagName("input"), REQUIREDS);
+    pushRequireds(document.getElementsByTagName("textarea"), REQUIREDS);
+    pushRequireds(document.getElementsByTagName("select"), REQUIREDS);
+}
+
+/**
+ * Helper method to append the destination array with specific
+ * elements from the source array. In this case, className is 'required' or 'invalid'
+ */
+function pushRequireds(source, destination) {
+    for (var i = 0; i < source.length; ++i) {
+        if (source[i].className.indexOf("required") != -1 || source[i].className.indexOf("invalid") != -1) {
+            destination.push(source[i]);
+        }
+    }
+}
+
+/**
+ * Navigates to the next element in the REQUIREDS array,
+ * relative to the lastRequred position. If new position
+ * out of bounds for this array, logic wraps around.
+ *
+ * @param iterForward indicates whether to iterate
+ * forwards (true) or backwards (false).
+ */
+function nextRequired(iterForward) {
+    var increment = iterForward ? 1 : -1;
+    lastRequired += increment + REQUIREDS.length;
+    lastRequired %= REQUIREDS.length;
+
+    try {
+        REQUIREDS[lastRequired].focus();
+        REQUIREDS[lastRequired].select();
+    } catch (e) {
+    }
+}
+
+/**
+ * Event handler checking for ctrl+q and ctrl+shift+q hotkeys
+ * to navigate caret to the next or previous required form field.
+ */
+document.onkeyup = function (nsEvent) {
+    var this_event = !nsEvent ? window.event : nsEvent;
+    var key_code = !nsEvent ? this_event.keyCode : this_event.which;
+    var source = !nsEvent ? this_event.srcElement : this_event.target;
+
+    if (key_code == 81 && this_event.ctrlKey && !this_event.shiftKey) { //control + 'q'
+        nextRequired(true);
+        return false;
+    } else if (key_code == 81 && this_event.ctrlKey && this_event.shiftKey) { //control + shift + 'q'
+        nextRequired(false);
+        return false;
+    }
+}
+
+/* leftPaneTop is to keep track of the "top" property
+ * of leftPane, rather than calculate it each time.
+ * This is cross-browser and more efficient.
+ */
+var leftPaneTop = 0;
+var resizeHandler = function () {
+    try {
+        var leftSidebarHeight = elem("left-sidebar").offsetHeight -
+            elem("buttonBar").offsetHeight -
+            elem("footer").offsetHeight -
+            elem("header").offsetHeight;
+        var leftPaneHeight = getActualLeftPaneHeight();
+        var tmp = leftSidebarHeight - leftPaneHeight;
+        var DEFAULT_MARGIN = 10;	//smallest top-margin for Task Menu
+        var taskMenuTopMargin = tmp >= DEFAULT_MARGIN ? tmp + "px" : DEFAULT_MARGIN + "px";
+
+        //increase top margin to have Task Menu trail on bottom of left sidebar
+        try{
+            elem("taskMenu").style.marginTop = taskMenuTopMargin;
+        }
+        catch(e){
+           // taskMenu element is not defined on the page
+        }
+
+        //show scroll buttons when window height is too small
+        if (leftSidebarHeight < leftPaneHeight) {
+            var diff = leftSidebarHeight - elem("leftPane").offsetHeight;// - elem("buttonDown").offsetHeight;
+            //display top scroll button only
+            //if menu isn't all the way at the top
+            elem("buttonUp").style.display = leftPaneTop == 0 ? "none" : "block";
+            elem("buttonDown").style.display = leftPaneTop <= diff ? "none" : "block";//"block";
+
+            //pull the menu down to avoid gap between scroll-down
+            //button and the menu when window height is increased
+            if (leftPaneTop < diff) {
+                elem("leftPane").style.top = leftPaneTop = diff;
+                //elem("buttonDown").style.display = "none";
+            }
+        } else {	//hide scroll buttons when menu is fully shown
+            elem("buttonUp").style.display = "none";
+            elem("buttonDown").style.display = "none";
+            elem("leftPane").style.top = leftPaneTop = 0;
+        }
+    } catch (e) {
+        //task menu or left side bar isn't defined on page
+    }
+};
+
+/**
+ * The main purpose of this function is to handle inaccurate left pane height value calculated in onload function for IE 11
+ *
+ * @returns The actual height of left pane or the global LEFT_PANE_HEIGHT if leftPane is undefined or simply null
+ */
+function getActualLeftPaneHeight() {
+    var leftPane = elem("leftPane");
+    if (leftPane) {
+        try{
+            elem("taskMenu").style.marginTop = '10px';
+        }
+        catch(e){
+            // taskMenu element is not defined on the page
+        }
+        return leftPane.offsetHeight;
+    }
+
+    return LEFT_PANE_HEIGHT;
+}
+
+addListener(window, 'resize', resizeHandler);
+
+/**
+ * Function scrollOut() is a preparation function for scrolling components in/out of view.
+ * Actual scrolling is done by scrollOutTimed(). This function simply determines which
+ * element to scroll and whether element is expanding or contracting.
+ * scrollOut() is called by onclick from either div.compHead (child of div.comp)
+ * or from a.close (child of div.options).
+ *
+ * @param scrollTrigger is the element that the call came from
+ */
+var scrollOutPeriod = 50;	//used in scrollOutTimed(); defines period
+var scrollOutSteps = 5;		//used in scrollOut() and scrollOutTimed(); defines number of steps
+function scrollOut(scrollTrigger) {
+    /* we can only scroll one thing at any given time;
+     'document.scrolling' global property will be our sentinel;
+     set back to false in scrollOutTimed, when scrolling done */
+    if (!document.scrolling) {
+        document.scrolling = true;
+    } else {
+        return false;
+    } //don't let the href of the link to be executed
+
+    var PADDINGS_AND_STUFF = 9;	//to accommodate for margins and paddings inside compContent
+    var comp = document.comp2scroll = findParent(scrollTrigger, "comp"); //comp div
+    var content = document.content2scroll = findDescendant(comp, "compContent"); //compContent div
+    var expanding = content.style.display == "none"; //if div hidden, then we're expanding it
+
+    /* remember original height of this component */
+    if (!content.proposedHeight) {
+        content.proposedHeight = content.offsetHeight - PADDINGS_AND_STUFF;
+    }
+
+    scrollOutTimed(scrollOutSteps, expanding); //do actual scrolling
+    return false; //don't let the href of the link to be executed
+}
+
+function scrollOutGrouped(scrollTrigger) {
+    /* we can only scroll one thing at any given time;
+     'document.scrolling' global property will be our sentinel;
+     set back to false in scrollOutTimed, when scrolling done */
+    //alert("scrollOut");
+    if (!document.scrolling) {
+        document.scrolling = true;
+    } else {
+        return false;
+    } //don't let the href of the link to be executed
+
+    var PADDINGS_AND_STUFF = 9;	//to accommodate for margins and paddings inside compContent
+
+    var compGroup = findParent(scrollTrigger, "compGroup"); //comp div
+
+    var comps = findDescendants(compGroup, "comp"); //comp div
+
+    var i = 0;
+    for (; i < comps.length; i++) {
+        var comp = eval("document.comp2scroll" + i + "= comps[i]");
+        var content = eval("document.content2scroll" + i + "= findDescendant(comp, 'compContent')"); //compContent div
+        var expanding = content.style.display == "none"; //if div hidden, then we're expanding it
+        if (!content.proposedHeight) {
+            content.proposedHeight = content.offsetHeight - PADDINGS_AND_STUFF;
+        }
+
+        scrollOutTimedGrouped(scrollOutSteps, expanding, i); //do actual scrolling
+    }
+
+    return false; //don't let the href of the link to be executed
+}
+
+/**
+ * Function scrollOutTimed() scrolls components in/out of view.
+ * Calls itself with delay of scrollOutPeriod, scrollOutSteps times.
+ *
+ * @param stepsLeft how many steps left
+ * @param expanding whether expanding or contracting
+ */
+function scrollOutTimed(stepsLeft, expanding) {
+    var comp = document.comp2scroll; //set in scrollOut
+    var content = document.content2scroll; //set in scrollOut
+    var hed = findDescendant(comp, "compHead");
+    var fraction = stepsLeft / scrollOutSteps; //fraction of visible component this "iteration"
+
+    //when expanding....
+    if (expanding) {
+        fraction = 1 - fraction; //...fraction is reverse of that when contracting
+
+        //display component, when we just started expanding
+        if (stepsLeft == scrollOutSteps) {
+            content.style.display = "block";
+        }
+    }
+    //+1 to safeguard against a case where new height is 0 (visually 1px won't make a difference)
+    var newHeight = fraction * content.proposedHeight + 1;
+    content.style.height = newHeight + "px";
+    if (stepsLeft != 0) {
+        setTimeout("scrollOutTimed(" + (stepsLeft - 1) + ", " + expanding + ")", scrollOutPeriod / scrollOutSteps);
+    } else {	//when this is the last 'iteration'...
+        content.style.display = expanding ? "block" : "none"; //set appropriate display css property
+        content.style.height = "auto"; //make sure component is the right size
+        document.scrolling = false; //update sentinel (see scrollOut())
+
+        //switch close-button css class to update picture
+        var btn = findDescendant(findDescendant(hed, "options"), "close");
+        if (!btn) {	//if button of class "close" couldn't be found...
+            btn = findDescendant(findDescendant(hed, "options"), "open");
+        }
+        if (btn) { //do this only if button is there at all
+            btn.className = expanding ? "close" : "open";
+        }
+    }
+}
+
+function scrollOutTimedGrouped(stepsLeft, expanding, i) {
+    //alert("scrollOutTimedIndexed");
+    var comp = eval("document.comp2scroll" + i); //set in scrollOut
+    var content = eval("document.content2scroll" + i); //set in scrollOut
+    var hed = findDescendant(comp, "compHead");
+    var fraction = stepsLeft / scrollOutSteps; //fraction of visible component this "iteration"
+
+    //when expanding....
+    if (expanding) {
+        fraction = 1 - fraction; //...fraction is reverse of that when contracting
+
+        //display component, when we just started expanding
+        if (stepsLeft == scrollOutSteps) {
+            content.style.display = "block";
+        }
+    }
+
+    //+1 to safeguard against a case where new height is 0 (visually 1px won't make a difference)
+    var newHeight = fraction * content.proposedHeight + 1;
+    content.style.height = newHeight + "px";
+    if (stepsLeft != 0) {
+        setTimeout("scrollOutTimedGrouped(" + (stepsLeft - 1) + ", " + expanding + ", " + i + ")", scrollOutPeriod / scrollOutSteps);
+    } else {	//when this is the last 'iteration'...
+        content.style.display = expanding ? "block" : "none"; //set appropriate display css property
+        content.style.height = "auto"; //make sure component is the right size
+        document.scrolling = false; //update sentinel (see scrollOut())
+
+        //switch close-button css class to update picture
+        try {
+            var btn = findDescendant(findDescendant(hed, "options"), "close");
+            if (!btn) {	//if button of class "close" couldn't be found...
+                btn = findDescendant(findDescendant(hed, "options"), "open");
+            }
+            if (btn) { //do this only if button is there at all
+                btn.className = expanding ? "close" : "open";
+            }
+        } catch (Exception) {
+        }
+    }
+}
+
+/* Helper function, used in scrollOut() and scrollOutTimed(). */
+function findDescendant(node, childClass) {
+    var i = 0;
+    for (; node.childNodes[i] != null; ++i) {
+        if (node.childNodes[i].className == childClass) {
+            break;
+        }
+    }
+    return node.childNodes[i];
+}
+
+function findDescendants(node, childClass) {
+    var i = 0;
+    var nodes = Array();
+    for (; node.childNodes[i] != null; ++i) {
+        if (node.childNodes[i].className == childClass) {
+            nodes.push(node.childNodes[i]);
+        }
+    }
+    return nodes;
+}
+
+/* Helper function, used in scrollOut() and scrollOutTimed(). */
+function findParent(node, parentClass) {
+    while (node.className != parentClass) {
+        node = node.parentNode;
+    }
+    return node;
+}
+
+/* Function scrolls left menu down. As long as 'scrolling' property
+ * is set to true by #buttonDown, this will iterate indefinately.
+ * So it should be set to false in onmouseout.
+ */
+var SCROLL_DISTANCE = 17; //left menu scrolling speed
+var SCROLL_DELAY = 50; //left menu scrolling delay
+function scrollMenuDown() {
+    //first, show scroll-up button, if it was hidden
+    if (leftPaneTop == 0) {
+        elem("buttonUp").style.display = "block";
+    }
+
+    var diff = elem("left-sidebar").offsetHeight -
+        elem("buttonBar").offsetHeight -
+        elem("footer").offsetHeight -
+        elem("header").offsetHeight -
+        elem("leftPane").offsetHeight;// -
+    //elem("buttonDown").offsetHeight;
+
+    leftPaneTop -= SCROLL_DISTANCE;
+    //we don't want to scroll too far
+    if (leftPaneTop < diff) {
+        leftPaneTop = diff;
+        elem("leftPane").style.top = diff + "px";
+        elem("buttonDown").style.display = "none";
+        return;
+    }
+    elem("leftPane").style.top = leftPaneTop + "px";
+
+    //the scrolling property should be set to true by button
+    //for mouseover, and to false for mouseout
+
+    if (elem("buttonDown").scrolling) {
+        setTimeout("scrollMenuDown()", SCROLL_DELAY);
+    }
+}
+
+/* Function scrolls left menu up. As long as 'scrolling' property
+ * is set to true by #buttonUp, this will iterate indefinately.
+ * So it should be set to false in onmouseout.
+ */
+function scrollMenuUp() {
+    var diff = elem("left-sidebar").offsetHeight -
+        elem("buttonBar").offsetHeight -
+        elem("footer").offsetHeight -
+        elem("header").offsetHeight -
+        elem("leftPane").offsetHeight;
+    //first, show scroll-down button, if it was hidden
+    if (leftPaneTop == diff) {
+        elem("buttonDown").style.display = "block";
+    }
+    leftPaneTop += SCROLL_DISTANCE;
+    //we don't want to scroll too far, so set the limit at 0
+    if (leftPaneTop >= 0) {
+        elem("buttonUp").style.display = "none";
+
+        elem("leftPane").style.top = leftPaneTop = elem("buttonUp").offsetHeight;
+        return;
+    }
+    elem("leftPane").style.top = leftPaneTop + "px";
+
+    //the scrolling property should be set to true by button
+    //for mouseover, and to false for mouseout
+    if (elem("buttonUp").scrolling) {
+        setTimeout("scrollMenuUp()", SCROLL_DELAY);
+    }
+}
+
+/**
+ * Function used to set IDP user preferences without having to reload the page.
+ * This is achieved by creating an image object, and assigning it a URL which
+ * links to the preference-setting IDP Action. While the image itself is invalid,
+ * the effect is that we successfully relay the passed parameters to the preference action.
+ *
+ * IMPORTANT: make sure that the URL used in this function is mapped in the action
+ * mapping to the com.univeris.idp.module.actions.SaveSitePreferenceAction
+ *
+ * @param servletPath - the path to which current servlet is mapped to; every component has that available
+ * @param parentID - parent ID of the preference (IDP site code, action mapping, component UID, etc.)
+ * @param preferenceName - name of the preference to set
+ * @param preferenceValue - new value to set
+ */
+function saveSitePreference(servletPath, parentID, preferenceName, preferenceValue) {
+    var prefLink = servletPath + "/system/save-site-pref?parentID=" + parentID + "&preferenceName=" + preferenceName + "&preferenceValue=" + preferenceValue;
+    var prefImage = new Image();
+    prefImage.src = prefLink;
+}
+
+/**
+ * Used by validatorMarker/ActionError components to recreate user input on pages
+ * so that the submitted form data is not lost after the page reloads with an error.
+ * Called from parseAndSub() method of the component's javascript.
+ *
+ * @param names - array of parameter names; may contain duplicates (e.g. checkboxes share name, but have different values)
+ * @param values - array of corresponding field values; e.g. names[n] has value values[n].
+ */
+function recreateInput(names, values) {
+    for (var i = 0; i < names.length; ++i) {
+        var currs = document.getElementsByName(names[i]);
+        for (var j = 0; j < currs.length; ++j) {
+            var curr = currs[j];
+            if (curr.tagName == "INPUT" && (curr.getAttribute("type") == "text" || curr.getAttribute("type") == "hidden") || curr.tagName == "TEXTAREA") {
+                if (typeof values[i][j] == 'undefined') {
+                    continue;
+                } //ignore field if it's null for any reason
+                if (typeof curr.numberFormatter == 'object') { //if the field is a formatted field, show a formatted value
+                    curr.numberFormatter.setNumber(values[i][j]);
+                    curr.value = curr.numberFormatter.toFormatted();
+                    continue;
+                }
+                curr.value = values[i][j];
+            } else if (curr.tagName == "INPUT" && (curr.getAttribute("type") == "checkbox" || curr.getAttribute("type") == "radio")) {
+                for (var k = 0; k < values[i].length; ++k) {
+                    if (curr.value == values[i][k]) {
+                        if (!curr.checked) {
+                            curr.checked = true;
+                        }
+                    }
+                }
+            } else if (curr.tagName == "SELECT") {
+                for (var k = 0; k < curr.options.length; ++k) {
+                    if (curr.options[k].value == values[i][j]) {
+                        curr.options[k].selected = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+function submitViaReportWindow(targetForm) {
+    var currDate = new Date();
+    var currTime = currDate.getTime();
+    targetForm.target = 'popUpReportWin' + currTime;
+    window.open('', 'popUpReportWin' + currTime, 'width=800,height=350,resizable=yes,scrollbars=yes,status=no');
+}
+
+/**
+ * Function cycles through the named elements and sets focus on them
+ * based on their visibility. A static array "focusOrderArray" is expected
+ * to be defined on the page (if not, the function is not executed), which
+ * sets the proper sequence.
+ * E.g.: var focusOrderArray = [['step1', 're-test', 'rng-test', 'num-test'], ['step2', 'num-test', 'rng-test', 're-test']];
+ * Combined with a definition of a variable "currentFocusStep", which in this case could correspond
+ * to either 'step1' or 'step2', this will result in focus being set iteratively to
+ * elements listed in the sub-array with the name of the step. Focus is not set if element is
+ * not visible. EWMS-1514.
+ */
+function stepThroughFocusItems() {
+    //Check, should we use custom field order
+    if (useCustomFocusOrder) {
+        stepThroughCustomFocusItems();
+        return;
+    }
+    // if the report is being generated, don't try to set focus on the main window
+    // since the popup window will be buried underneath it.
+    if (reportInProgress) {
+        return;
+    }
+    if (exportInProgress) {
+        return;
+    }
+
+    try {
+        !focusOrderArray
+    } catch (e) {
+        return;
+    } //quit if the focusOrderArray array is not defined
+
+    for (var i = 0; i < focusOrderArray.length; ++i) {
+        if (currentFocusStep == focusOrderArray[i][0]) {
+            //temp debugging
+            /*dojo.debug("Focus step: " + currentFocusStep);
+             dojo.debug("Trying focus on: " + focusOrderArray[i].slice(1).join(", "));*/
+
+            for (var j = 1; j < focusOrderArray[i].length; ++j) { //set focus to each visible field for the selected step
+                var currentElement = document.getElementsByName(focusOrderArray[i][j])[0];
+                if (!currentElement) {
+                    continue;
+                } //if field is not on the page, go on to next
+                var isVisible;
+                if (document.defaultView) {
+                    isVisible = document.defaultView.getComputedStyle(currentElement, "").getPropertyValue("display") != "none";
+                } //mozilla's check
+                else if (currentElement.currentStyle) {
+                    isVisible = currentElement.currentStyle["display"] != "none";
+                } //IE's check
+                if (isVisible) {
+                    if (currentElement.getAttribute("type") != "hidden") {
+                        currentElement.focus();
+                        //temp debugging
+                        //dojo.debug("Focussed on field: " + currentElement.id);
+                    }
+                    if (currentElement.getAttribute("type") == "text") { //only select if element is a textbox
+                        currentElement.select();
+                    }
+                }
+            }
+        }
+    }
+}
+
+function stepThroughCustomFocusItems() {
+
+    // if the report is being generated, don't try to set focus on the main window
+    // since the popup window will be buried underneath it.
+    if (reportInProgress) {
+        return;
+    }
+    if (exportInProgress) {
+        return;
+    }
+
+    try {
+        !customFocusOrderArray
+    } catch (e) {
+        return;
+    } //quit if the customFocusOrderArray array is not defined
+
+    //alert("CurrentFocusStep: " + currentFocusStep);
+    for (var i = 0; i < customFocusOrderArray.length; ++i) {
+        if (currentFocusStep == customFocusOrderArray[i][0]) {
+            var activeControl = customFocusOrderArray[i][1];
+            //Going through all fields in order array
+            var useAny = false;//set to true if we find control, but didn't set focus
+            for (var j = 0; j < customFieldOrderArray.length; ++j) {
+                if (useAny || customFieldOrderArray[j] == activeControl) {
+                    useAny = true; //we can use any field after this step (we find required field or already use any
+                    //alert("Fix:" + customFieldOrderArray[j]);
+                    var currentControl = document.getElementsByName(customFieldOrderArray[j])[0];
+                    if (!currentControl) { //missing
+                        continue;
+                        //if field is not on the page, go on to next
+                    }
+                    //check for visibility
+                    var isVisible;
+                    if (document.defaultView) {
+                        isVisible = document.defaultView.getComputedStyle(currentControl, "").getPropertyValue("display") != "none";
+                    } else if (currentControl.currentStyle) { //mozilla's check
+                        isVisible = currentControl.currentStyle["display"] != "none";
+                    } //IE's check
+                    if (isVisible) {
+                        if (currentControl.getAttribute("type") != "hidden") {
+                            try {
+                                currentControl.focus();
+
+                                if (currentControl.getAttribute("type") == "text") { //only select if element is a textbox
+                                    currentControl.select();
+                                }
+                                break;
+                            } catch (e) {
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Function used in components with lists w/ hidden details (see C6 in Style Reference).
+ * Script is called from an onclick event of the image that causes the toggle. The image's @id
+ * attribute should be a concatenation of the following: "img", its sequential number, servlet name, and
+ * the uniqueID of the component. E.g. id="img155abcd", where '155' is the seqNum, and 'abcd' is the componentUID.
+ * The corresponding <tr> element should have a similar @id, except with a "row" instead of "img".
+ * @param seqNum - sequential number
+ * @param servlet - servlet name. E.g. "/upm"
+ * @param compID - component's unique ID; used so that image ID's do not duplicate
+ *                    on the page if used in several components on the page.
+ * @return the current status, true for show and false for hide
+ */
+function toggleHiddenDetails(seqNum, servlet, compID) {
+    return hiddenNodeToggler.toggleElementHiddenDetails(hiddenNodeToggler.getSectionNodeId(seqNum, compID), servlet, hiddenNodeToggler.getImageNodeId(seqNum, compID));
+}
+
+/**
+ *
+ * Global Instance of HiddenNodeManager
+ *
+ */
+var hiddenNodeToggler = new HiddenNodeToggler();
+
+/**
+ * A utility class that controls (toggles) the visibility of a html node, typically including an arrow image indicating the show/hide status.
+ */
+function HiddenNodeToggler() {
+    var Constants = {
+        'FUNCTION_RESULT_SHOW': 'show',
+        'FUNCTION_RESULT_HIDE': 'hide',
+        'POSITION_SHOW': 'static',
+        'POSITION_HIDE': 'absolute',
+        'LEFT_HIDE': '-9999px',
+        'CLASS_HIDE': 'hide' //css class name
+    };
+
+    // The URI of image representing the status of show
+    // By default, /files/images/arrow_down.gif
+    var imgShowUri = '/files/images/arrow_down.gif';
+    //setter of imgShowUri
+    this.setImgShowUri = function (uri) {
+        imgShowUri = uri;
+    }
+
+    // The URI of image representing the status of hide
+    // By default, /files/images/arrow_up.gif
+    var imgHideUri = '/files/images/arrow_up.gif';
+    //setter of imgShowUri
+    this.setImgHideUri = function (uri) {
+        imgHideUri = uri;
+    }
+
+    /**
+     *  Get ID of section element based on sequential number and component's unique ID
+     * @param seqNum - sequential number
+     * @param compID - component's unique ID; used so that image ID's do not duplicate
+     * @return {String}
+     */
+    this.getSectionNodeId = function (seqNum, compID) {
+        return 'row' + seqNum + compID;
+    }
+
+    /**
+     *  Get ID of the indicator image element based on sequential number and component's unique ID
+     * @param seqNum - sequential number
+     * @param compID - component's unique ID; used so that image ID's do not duplicate
+     * @return {String}
+     */
+    this.getImageNodeId = function (seqNum, compID) {
+        return 'img' + seqNum + compID;
+    }
+
+    /**
+     * Function used in components with lists w/ hidden detail of a group nodes.
+     * Script is called from an onclick event of the image that causes the toggle. The image's @id
+     * attribute should be a concatenation of the following: "img", its sequential number, servlet name, and
+     * the uniqueID of the component. E.g. id="img155abcd", where '155' is the seqNum, and 'abcd' is the componentUID.
+     * The corresponding <tr> element should have a similar @id, except with a "row" instead of "img".
+     * @param seqNum - sequential number
+     * @param servlet - servlet name. E.g. "/upm"
+     * @param compID - component's unique ID; used so that image ID's do not duplicate
+     *                    on the page if used in several components on the page.
+     * @param size  - size of the group, if it is zero, nothing will be changed.
+     */
+    this.toggleHiddenDetailGroupNodes = function (seqNum, servlet, compID, size) {
+        var image = elem(this.getImageNodeId(seqNum, compID));
+
+        var showhide = true;
+        for (var i = 0; i < size; i++) {
+            showhide = this.toggleElementHiddenDetails(hiddenNodeToggler.getSectionNodeId(seqNum, compID + i),
+                    servlet,
+                    hiddenNodeToggler.getImageNodeId(seqNum, compID + i))
+                && showhide;
+        }
+
+        if (image) {
+            image.src = (showhide) ? servlet + imgHideUri : image.src = servlet + imgShowUri;
+        }
+    };
+
+    /**
+     * This Function is more generic than toggleHiddenDetails by passing in the IDs of element and image
+     * toggle the image to show or hide an element (section)
+     * @param elementId the id of the element (section) to toggle
+     * @param servlet - servlet name. E.g. "/upm"
+     * @param imageId   the id of the image indicating the toggle status
+     * @param displayValue - Optional. The value of display. E.g. "inline".
+     * @return 'show' or 'hide'
+     */
+    this.toggleElementHiddenDetails = function (elementId, servlet, imageId, displayValue) {
+
+        var element = elem(elementId);
+        var image = elem(imageId);
+        var showOrHide = this.toggleElement(element, displayValue);
+        if (showOrHide == Constants.FUNCTION_RESULT_SHOW) {
+            if (image) {
+                image.src = servlet + imgHideUri;
+            }
+            //the current status is show
+            return true;
+
+        } else {
+            if (image) {
+                image.src = servlet + imgShowUri;
+            }
+        }
+        //the current status is hidden
+        return false;
+    };
+
+    /**
+     * Generic function to toggle the hidden element
+     * @param elementId
+     * @param displayValue  the value for display attribute. If undefined, call getDisplayValueByTagName to get the value
+     * @return 'show' or 'hide'
+     */
+    this.toggleElement = function (element, displayValue) {
+        if (element) {
+            if (this.isElementHidden(element)) {
+
+                element.style.display = (displayValue) ? displayValue : getDisplayValueByTagName(element.tagName);
+                element.style.visibility = 'visible';
+                //to make it compatible with class hide or hidden by shifting
+                if (element.style.position != Constants.POSITION_SHOW) {
+                    element.style.position = Constants.POSITION_SHOW;
+                }
+
+                return Constants.FUNCTION_RESULT_SHOW;
+            }
+
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+        }
+
+        return Constants.FUNCTION_RESULT_HIDE;
+    };
+
+    /**
+     * Check if the input element (node) is hidden
+     * @param element
+     * @return {*}
+     */
+    this.isElementHidden = function (element) {
+        return element.style.display == 'none'
+            || (element.style.display.length === 0
+            && hasClassForHidingElement(element))
+            || (element.style.left == Constants.LEFT_HIDE
+            && element.style.position == Constants.POSITION_HIDE);
+    };
+
+    /**
+     * Check if the input element has a class hiding the element
+     * Firstly check classList if it is ie10+ or other type of browser
+     * Then, check className if the attribute is defined and not empty
+     *
+     * @param element
+     * @return {*}
+     */
+    function hasClassForHidingElement(element) {
+        if (element.classList) {
+            return element.classList.contains(Constants.CLASS_HIDE)
+        } else if (element.className) {
+            var classes = element.className.split(' ');
+            return classes.indexOf(Constants.CLASS_HIDE) != -1;
+        }
+
+        return false;
+    }
+
+    /**
+     * get value for display attribute based on element's tag name
+     * @param element
+     * @return display value
+     */
+    function getDisplayValueByTagName(tagName) {
+        if (tagName) {
+            var displayValue = 'block'; //default value
+            switch (tagName) {
+                case 'TR' :
+                    //from IE8, table-row is supported. So, no need to use blcok.
+                    displayValue = 'table-row';
+                    break;
+                case 'TD' :
+                    displayValue = 'table-cell';
+                    break;
+                case 'SPAN':
+                    displayValue = 'inline';
+                    break;
+            }
+
+            return displayValue;
+        }
+
+        return '';
+    };
+};
+
+/**
+ * Replacement function for toggleHiddenDetails(), which has no dependency on the
+ * state of the collapse image. It does depend on the mainSessionTimeoutManager._servletPath
+ * being set. This is guaranteed for most pages since they define the UtilityFooter component.
+ * @param index - sequential number
+ * @param seed - unique identifier helping resolve a unique collapsable section
+ */
+function toggleSection(index, seed) {
+    var suffix = index + seed;
+    var domImage = elem("img" + suffix);
+    var domSection = elem("row" + suffix);
+    var servletPath = mainSessionTimeoutManager._servletPath;
+    var downArrow = servletPath + "/files/images/arrow_down.gif";
+    var upArrow = servletPath + "/files/images/arrow_up.gif";
+    var collapsed = (typeof domSection.isCollapsed == "undefined") ? domSection.style.display == "none" : domSection.isCollapsed;
+
+    if (collapsed) {
+        domSection.style.display = (!document.all) ? 'table-row' : 'block'; //block in IE, table-row in Mozilla
+        domImage.src = upArrow;
+        domSection.isCollapsed = false;
+    } else {
+        domSection.style.display = "none";
+        domImage.src = downArrow;
+        domSection.isCollapsed = true;
+    }
+
+    return false;
+}
+
+/**
+ * This function will iterate through all input, textarea and select elements
+ * on the page and change their state to read only/disabled.  This is used to lock a
+ * page before entering a refresh (ie update called, secondary screen, etc)
+ */
+function disableEdit() {
+    //don't do anything if user preference suppresses this functionality.
+    //see UtilityFooter.xsl for details.
+    if (typeof allowFormDisableOnReload == 'undefined' || allowFormDisableOnReload == false) {
+        return;
+    }
+
+    try {
+        //Text Areas first
+        var taElem = document.getElementsByTagName("textarea");
+        for (var j = 0; j < taElem.length; ++j) {
+            try {
+                taElem[j].readOnly = true;
+            } catch (ex) {
+            }
+        }
+
+        //Then inputs, text & passwords go read only, buttons are disable
+        var inputs = document.getElementsByTagName("input");
+        for (j = 0; j < inputs.length; ++j) {
+            try {
+                type = inputs[j].type.toLowerCase();
+                if (type == 'text' || type == 'password') {
+                    inputs[j].readOnly = true;
+                }
+                else if (type == 'button' || type == 'submit' || type == 'reset') {
+                    inputs[j].disabled = true;
+                }
+                else if (type == 'checkbox') {
+                    insertDisabledClone(inputs[j]);
+                }
+                else if (type == 'radio') {
+                    insertDisabledRadio(inputs[j]);
+                }
+            } catch (ex) {
+            }
+        }
+
+        //Selects, we have to just re-target focus
+        var selectElems = document.getElementsByTagName("select");
+        for (j = 0; j < selectElems.length; ++j) {
+            try {
+                insertDisabledClone(selectElems[j]);
+            } catch (ex) {
+            }
+        }
+    } catch (ex) {
+    }
+}
+
+function insertDisabledRadio(elem) {
+    //For radio buttons we create a hidden field to submit
+    if (elem.isCloned == null) {
+        var clone = new input();
+        clone.style.visibility = 'hidden';
+        clone.style.display = 'none';
+        clone.type = 'text';
+        clone.name = elem.name;
+        clone.id = elem.id;
+        clone.value = elem.value;
+        clone.isCloned = 'true'
+        elem.insertAdjacentElement('afterEnd', clone);
+        elem.disabled = 'true';
+    }
+}
+
+function insertDisabledClone(elem) {
+    var isFirefox = typeof InstallTrigger !== 'undefined';
+    if (elem.isCloned == null) {
+        var cloned = elem.cloneNode(true);
+        if (!isFirefox) {
+            elem.style.visibility = 'hidden';
+            elem.style.display = 'none';
+        }
+        cloned.disabled = 'true';
+        cloned.isCloned = 'true'
+        cloned.id = cloned.id + '-cloned';
+        cloned.checked = elem.checked;
+        elem.insertAdjacentElement('afterEnd', cloned);
+        //Need to set the selected item for select lists
+        if (cloned.tagName.toLowerCase = 'select') {
+            cloned.value = elem.value;
+        }
+    }
+}
+
+/**
+ * This function will iterate through all hypertext link
+ * on the page and remove their "href" attribute. This is used to lock a
+ * page with results in lookup search after selecting a hypertext link
+ * with one of the search result(i.e. if we choose one link than other links must become inactive).
+ */
+function disableLinks() {
+    //don't do anything if user preference suppresses this functionality.
+    //see UtilityFooter.xsl for details.
+    if (typeof allowFormDisableOnReload == 'undefined' || allowFormDisableOnReload == false) {
+        return;
+    }
+    try {
+        var taElem = document.getElementsByTagName("a");
+        for (var j = 0; j < taElem.length; ++j) {
+            try {
+                taElem[j].href = "#";
+                taElem[j].removeAttribute("href");
+            } catch (ex) {
+            }
+        }
+        isDisabled = true;
+    } catch (ex) {
+    }
+}
+
+/**
+ * Important!!! The dojo library MUST be included in HTML file before main.js in order for this
+ * to work properly!
+ *
+ * Function is called at the end of component frame (e.g. ComponentProcessor-FormFrame-static.ftl),
+ * to call, publish, and register that component's lifecycle events.
+ *
+ * This functionality expects the following: proper usage is to define a JSON object somewhere on the page,
+ * or in an included javascript file, whose name is the component UID (as defined in component.mappping.xml),
+ * prefixed with "json". E.g. "jsonPurchaseComponent". The object can define the following lifecycle
+ * listener functions:
+ *        - onImmediateLoad: will be called as the page has loaded all content for this component; i.e., before window.onload
+ *        - onPageLoad: will be called as soon as the page loads, AFTER the main window.onload handler (defined above)
+ *
+ * This function also makes sure that these events get published across the document, which means they can be
+ * subscribed to anywhere in the document.
+ *
+ * Here are topic names, where [componentUID] is component's UID, e.g. PurchaseComponent:
+ *        - "/component/[componentUID]/immediateLoad" : published after onImmediateLoad is executed
+ *        - "/component/[componentUID]/pageLoad" : published after onPageLoad is executed
+ */
+function registerComponentEvents(componentName, servletPath, parameters) {
+    var jsonObj = "json" + componentName; //name of this component's json container
+    var jsonObjInstance = null; //instance of json container
+    var objDefined = false; //flag indicating if json object is declared
+
+    try { //type checking; if obj not defined, define in global scope
+        objDefined = typeof eval(jsonObj) != "undefined"
+    } catch (e) {
+        try {
+            eval("window." + jsonObj + " = {}");
+            objDefined = true;
+        } catch (e) {
+            /*could execute; do nothing*/
+        }
+    }
+
+    if (objDefined) { //set common parameters and perform immediate scripts
+        jsonObjInstance = eval(jsonObj); //load json container instance
+
+        jsonObjInstance.uid = componentName; //set component UID as a common prop for later reuse  [e.g. in mainXhrManager]
+        jsonObjInstance.parameters = parameters; //set component parameters as a common prop for later reuse [e.g. in mainXhrManager]
+        jsonObjInstance.servletPath = servletPath; //set servlet path as a common prop for later reuse
+        try {
+            jsonObjInstance.onImmediateLoad(); //call actual immediate load listener
+            dojo.debug("Successfully called " + jsonObj + ".onImmediateLoad()");
+        } catch (e) {
+            if (IS_DOJO_DEFINED) {
+                dojo.debug("Could not call " + jsonObj + ".onImmediateLoad(). Either it's not defined, or contains errors");
+            }
+        }
+    }
+
+    if (IS_DOJO_DEFINED) { //logic for firing global onload events for this component
+        mainEventManager.publishComponentEvent(jsonObjInstance, "immediateLoad"); //publish corresponding event
+        //when page loads, we'll call this component's onPageLoad handler, and publish corresponding event
+        dojo.addOnLoad(function () {
+            if (objDefined) {
+                try {
+                    eval(jsonObj + '.onPageLoad()');
+                    dojo.debug("Successfully called " + jsonObj + ".onPageLoad()");
+                } catch (ex) {
+                    dojo.debug("Could not call " + jsonObj + ".onPageLoad(). Either it's not defined, or contains errors");
+                }
+            }
+            mainEventManager.publishComponentEvent(jsonObjInstance, "pageLoad"); //publish onload event for this component...
+        });
+    }
+}
+
+/**
+ * XHR Manager is the main object which will be utilized by components
+ * to perform asynchronous form submission and component reloading via Ajax
+ */
+var mainXhrManager = {
+    /**
+     * Locks XHR submit until the time that callback is invoked, or
+     * an error is raised. This prevents accidental double-submits.
+     */
+    _isXhrLocked: false,
+    /**
+     * Parameters, as an array, as they were passed during the latest call to mainXhrManager.submit().
+     * Used by the error handler to resubmit the request, if user chose that option.
+     * @see mainXhrManager._reSubmit().
+     */
+    _lastSubmitParameters: null,
+    /**
+     * Parameters, as an array, as they were passed during the latest call to mainXhrManager.reloadComponent().
+     * Used by the error handler to resubmit the request, if user chose that option.
+     * @see mainXhrManager._reReloadComponent().
+     */
+    _lastReloadComponentParameters: null,
+    /**
+     * JSON object holds key-value for an additional parameter that
+     * should be sent to receiving action to indicate that an XHR retry
+     * was attempted. This object is to be mixed in with the rest of content
+     * sent via XHR.
+     */
+    _retryEventParameter: {"raise-event": "xhr-retry-attempt"},
+    /**
+     * Function used to submit a form via Ajax. It's possible to specify through
+     * parameters that it is preferred to reload the component afterwards as well.
+     * The component will not be reloaded if the server returned a client redirect request (only on error).
+     *
+     * Publishes two events:
+     *        - "/component/[componentUID]/xhrSubmit/start"    - just before XHR request is sent to server
+     *        - "/component/[componentUID]/xhrSubmit/done"    - right after XHR response is received from server
+     *
+     * @param jsonComponent                (Required) - JSON container for the component to be refreshed
+     * @param attemptComponentReload    (Required) - a flag indicating whether to do an async reload of component contents
+     * @param ignoreXhrLock                (Optional) - flags this call to bypass XHR submit lock; this will force XHR submit to go through regardless. Default value is false
+     * @param formObject                (Optional) - form to submit. If nothing (null) passed, default form defined in ComponentProcessor-FormFrame-static is used
+     * @param actionPath                (Optional) - URL to submit form to. If nothing or null are passed, uses the form's action URL
+     * @param extraParams                (Optional) - Extra request parameter(s) to send in the body of XHR, in JSON form
+     */
+    submit: function (jsonObjInstance, attemptComponentReload, ignoreXhrLock, formObject, actionPath, extraParams) {
+        if (this._isXhrLocked && !ignoreXhrLock) {
+            dojo.debug("WARNING: mainXhrManager.submit(): Attempted to submit form via XHR while another submit is in progress");
+            return;
+        }
+        //lock this function such that it cannot be called twice during the same submit
+        this._isXhrLocked = true;
+        try {
+            //if no form passed, use the default, which is the
+            //form defined by ComponentProcessor-FormFrame-static
+            if (formObject == null) {
+                formObject = document.forms[jsonObjInstance.uid];
+            }
+            //if no action path passed, use the form's action URL
+            if (actionPath == null) {
+                actionPath = formObject.action;
+            }
+            else { //expected a URL not prefixed with servlet path; so take care of that
+                actionPath = jsonObjInstance.servletPath + actionPath;
+            }
+            try { //hide action exception and notes divs when doing XHR submit
+                var divList = ["actionExceptionDiv", "actionWarningDiv", "validationErrorDiv"];
+                for (var i in divList) {
+                    if (elem(divList[i]) != null) {
+                        elem(divList[i]).style.display = "none";
+                    }
+                }
+            } catch (e) {
+                /*safe to ignore*/
+            }
+
+            dojo.debug("mainXhrManager.submit(): Submitting to \"" + actionPath + "\"");
+            mainEventManager.publishComponentEvent(jsonObjInstance, "xhrSubmit/start");
+
+            //define and add extra request parameters
+            var additionalContent = {"xhr-request": "true"}; //indicates to IDP that this is an XHR [Ajax] request; required
+            if (extraParams != null) {
+                dojo.lang.mixin(additionalContent, extraParams); //if any extra parameters were passed, mix them in with existing
+            }
+
+            dojo.io.bind({
+                url: actionPath,
+                load: function (type, data, evt) {
+                    mainXhrManager._isXhrLocked = false; //clear XHR submit lock, so subsequent submits can be performed
+
+                    dojo.debug("Successfully submitted " + jsonObjInstance.uid + " form via XHR. Response size: " + data.length + " Bytes");
+                    mainEventManager.publishComponentEvent(jsonObjInstance, "xhrSubmit/done");
+                    var serverAskedRedirect = false;
+
+                    try {
+                        var jsonResponse = eval("(" + data + ")");
+                        if (jsonResponse.redirect) { //if IDP asked us to redirect...
+                            var urlPrefix = jsonObjInstance.servletPath;
+                            //check if URL contains servlet path...
+                            if (jsonResponse.url.substr(0, jsonObjInstance.servletPath.length + 1) == jsonObjInstance.servletPath + "/") {
+                                urlPrefix = ""; //and set it to none if url already contains it
+                                dojo.debug("WARNING: JSON response contained a redirect URL with servlet path: " + jsonResponse.url);
+                            }
+                            serverAskedRedirect = true; //...and set the flag, so we don't reload the component
+                            window.location.href = urlPrefix + jsonResponse.url; //then go to url
+                        }
+                    } catch (e) {
+                        dojo.debug("WARNING: Response from XHR submit was likely a redirect!");
+                        dojo.debugShallow(e);
+                    } finally {
+                        if (attemptComponentReload && !serverAskedRedirect) { //component reload was requested; call corresponding handler
+                            mainXhrManager.reloadComponent(jsonObjInstance);
+                        }
+                    }
+                },
+                error: function (type, data, evt) {
+                    var callback = dojo.lang.hitch(mainXhrManager, "_reSubmit");
+                    mainXhrManager.errorHandler("mainXhrManager.submit()", data, callback);
+                },
+                formNode: formObject,
+                content: additionalContent,
+                preventCache: true
+            });
+        } catch (e) {
+            this._isXhrLocked = false;
+            dojo.debug("ERROR: mainXhrManager.submit():");
+            dojo.debugShallow(e);
+        }
+    },
+
+    /**
+     * Shorthand form of the submit function. Declared to make the most common usage easier.
+     * Majority of components will want to do a quick chaining of an async submit with an
+     * immediate async refresh. This variation presets the main parameters for such usage.
+     *
+     * @param jsonObjInstance (Required) - JSON container for the component to be submitted/refreshed
+     * @param actionPath (Optional) - action to submit the component form to; if omitted, component form's action URL is used
+     */
+    submitQuick: function (jsonObjInstance, actionPath) {
+        this.submit(jsonObjInstance, true, false, null, actionPath);
+    },
+
+    /**
+     * Function used to reload contents of a component via XHR. Any embedded scripts are also executed.
+     * After contents are loaded, common onload functions are run: assigning calendars, focusing on items, etc.
+     *
+     * NOTE: stepThroughFocusItems() is NOT run here; that responsibility must be fulfilled by component's
+     * own logic. The reason being that stepThroughFocusItems depends on two globally scoped variables:
+     * focusOrderArray and currentFocusStep. Component must handle this case if needs to use this functionality.
+     *
+     * Publishes two events:
+     *        - "/component/[componentUID]/xhrReload/start" - thrown when function starts execution
+     *        - "/component/[componentUID]/xhrReload/done" - thrown when content is received from server, and content refreshed
+     *
+     * In addition, component JSON container's onAfterAjaxReload() listener is called,
+     * just after the finishing topic is posted, i.e. when component contents are completely refreshed.
+     *
+     * @param jsonObjInstance - JSON container for the component to be refreshed
+     */
+    reloadComponent: function (jsonObjInstance, extraParams) {
+        mainEventManager.publishComponentEvent(jsonObjInstance, "xhrReload/start");
+        try {
+            jsonObjInstance.onBeforeAjaxReload();
+            dojo.debug("Successfully called json" + jsonObjInstance.uid + ".onBeforeAjaxReload()");
+        }
+        catch (e) {
+            dojo.debug("Could not call json" + jsonObjInstance.uid + ".onBeforeAjaxReload(). Either it's not defined, or contains errors");
+        }
+
+        try {
+            //XHR request parameters
+            var requestParameters = {
+                uid: jsonObjInstance.uid, //uid parameter
+                params: jsonObjInstance.parameters //params parameter
+            };
+            if (extraParams != null) {
+                dojo.lang.mixin(requestParameters, extraParams);
+            }
+
+            dojo.io.bind({
+                url: jsonObjInstance.servletPath + "/system/component",
+                load: function (type, data, evt) {
+                    try {
+                        dojo.debug(jsonObjInstance.uid + " component retrieved contents size: " + (data.length) + " Bytes");
+
+                        elem(jsonObjInstance.uid + "_content").innerHTML = data;
+                        mainXhrManager.evalScripts(data); //evaluate javascript inside retrieved content
+                        mainXhrManager.insertScripts(data, jsonObjInstance.uid); //insert javascript into DOM from retrieved content
+                    } catch (e) {
+                        dojo.debug("ERROR: mainXhrManager.reloadComponent.anonymous():");
+                        dojo.debugShallow(e);
+                    } finally {
+                        mainEventManager.publishComponentEvent(jsonObjInstance, "xhrReload/done");
+
+                        /* run common onload functions; stepThroughFocusItems() deliberately not called:
+                         * that responsibility is left to component's onAfterAjaxReload() handler
+                         */
+                        try {
+                            if (window.USER_DATE_FORMAT == undefined) {
+                                window.USER_DATE_FORMAT = "d-m-y";
+                            }
+                            if (window.USER_DATE_DELIMITER == undefined) {
+                                window.USER_DATE_DELIMITER = "-";
+                            }
+                            findAllRequireds();
+                            focusOnDemand();
+                            assignCalendars();
+                            //attaching back format listeners is VERY SLOW on FireFox; comment out to see difference
+                            attachFormatListenersToAll(groupingCharFormat, decimalCharFormat, moneySymbolFormat, percentSymbolFormat, moneyBeforeFormat, percentBeforeFormat);
+                        } catch (e) {
+                            dojo.debug("ERROR: When running common onload functions in mainXhrManager.reloadComponent.anonymous():");
+                            dojo.debugShallow(e);
+                        }
+
+                        try {
+                            jsonObjInstance.onAfterAjaxReload();
+                            dojo.debug("Successfully called json" + jsonObjInstance.uid + ".onAfterAjaxReload()");
+                        } catch (e) {
+                            dojo.debug("Could not call json" + jsonObjInstance.uid + ".onAfterAjaxReload(). Either it's not defined, or contains errors");
+                        }
+                    }
+                },
+                error: function (type, data, evt) {
+                    var callback = dojo.lang.hitch(mainXhrManager, "_reReloadComponent");
+                    mainXhrManager.errorHandler("mainXhrManager.reloadComponent()", data, callback);
+                },
+                content: requestParameters,
+                preventCache: true
+            });
+        } catch (e) {
+            dojo.debug("ERROR: mainXhrManager.reloadComponent():");
+            dojo.debugShallow(e);
+        }
+    },
+
+    /**
+     * Error handler for XHR bindings. Used to display a message indicating a communication error to client.
+     *
+     * @param reference - Source code reference string; used to give more info on where in the code the error happened.
+     * @param data - the data string, as passed to the error handler in dojo.io.bind. Used to display error details.
+     */
+    errorHandler: function (reference, data, refreshCallbackFunction) {
+        this._isXhrLocked = false; //clear XHR submit lock, so subsequent submits can be performed
+        dojo.debug("ERROR: " + reference);
+        dojo.debugShallow(data);
+
+        var userResponseOK = confirm("There was a problem communicating with the server. Would you like to retry?" +
+            "\n(Choosing \"Cancel\" will refresh the screen to keep information current)" +
+            "\n\nTechnical problem details:\n" + reference + ": " + data.message);
+        //if user chose option to retry, then invoke the callback function passed in
+        if (userResponseOK) {
+            dojo.debug("Retrying last user XHR action...");
+            refreshCallbackFunction();
+        } else {
+            history.go(0); //otherwise, reload entire page
+        }
+    },
+
+    /**
+     * Function is used to call mainXhrManager.submit() with previous parameters
+     * stored by AOP around advice in _lastSubmitParameters field. Example case
+     * where this is useful is when there was an error accessing the server, and
+     * the user is presented with a prompt to retry, after which the XHR request
+     * is repeated.
+     */
+    _reSubmit: function () {
+        try {
+            var callArgs = this._lastSubmitParameters;
+            callArgs[5] = this._retryEventParameter; //add the retry event param as sixth parameter
+
+            this.submit.apply(this, callArgs);
+        } catch (e) {
+            dojo.debug("ERROR: mainXhrManager._reSubmit():");
+            dojo.debugShallow(e);
+        }
+    },
+
+    /**
+     * Function is used to call mainXhrManager.reloadComponent() with previous parameters
+     * stored by AOP around advice in _lastSubmitParameters field. Example case
+     * where this is useful is when there was an error accessing the server, and
+     * the user is presented with a prompt to retry, after which the XHR request
+     * is repeated.
+     */
+    _reReloadComponent: function () {
+        try {
+            var callArgs = this._lastReloadComponentParameters;
+            callArgs[1] = this._retryEventParameter; //add the retry event param as second parameter
+
+            this.reloadComponent.apply(this, this._lastReloadComponentParameters);
+        } catch (e) {
+            dojo.debug("ERROR: mainXhrManager._reReloadComponent():");
+            dojo.debugShallow(e);
+        }
+    },
+
+    /**
+     * Evaluates scripts inside an HTML string. Used to force execution of scripts
+     * received in an Ajax response.
+     *
+     * WARNING: Any functions declared in executed JavaScript will go out of scope once
+     * the eval statement completes. It is possible to keep them in scope by attaching
+     * them as a method to a function that was defined at the document level.
+     *
+     * @param htmlString - HTML string to execute scripts inside
+     * @private
+     */
+    evalScripts: function (htmlString) {
+        var scriptFragment = '(?:<script.*?>)((\n|\r|.)*?)(?:<\/script>)';
+        var matchAll = new RegExp(scriptFragment, 'img');
+        var matchOne = new RegExp(scriptFragment, 'im');
+
+        var scriptTags = htmlString.match(matchAll) || [];
+        for (var i = 0; i < scriptTags.length; ++i) {
+            var scriptTag = scriptTags[i];
+            scriptTags[i] = (scriptTag.match(matchOne) || ['', ''])[1];
+            try {
+                eval(scriptTags[i]);
+            } catch (e) {
+                if (IS_DOJO_DEFINED) {
+                    dojo.debug("ERROR: mainXhrManager.evalScripts(): " + e);
+                    dojo.debugShallow(scriptTags[i]);
+                }
+            }
+        }
+    },
+
+    /**
+     * Insert scripts into DOM from an HTML string. Used for registration of scripts
+     * received in an Ajax response into DOM.
+     *
+     * @param htmlString - HTML string with scripts inside
+     * @param uid - uid parameter
+     * @private
+     */
+    insertScripts: function (htmlString, uid) {
+        var scriptFragment = '(?:<script.*?>)((\n|\r|.)*?)(?:<\/script>)';
+        var matchAll = new RegExp(scriptFragment, 'img');
+        var matchOne = new RegExp(scriptFragment, 'im');
+
+        var scriptTags = htmlString.match(matchAll) || [];
+        for (var i = 0; i < scriptTags.length; ++i) {
+            var scriptTag = scriptTags[i];
+            scriptTags[i] = (scriptTag.match(matchOne) || ['', ''])[1];
+            try {
+                var objscript = document.createElement('script');
+                objscript.type = 'text/javascript';
+                objscript.text = scriptTags[i];
+                elem(uid + '_content').appendChild(objscript);
+            } catch (e) {
+                if (IS_DOJO_DEFINED) {
+                    dojo.debug("ERROR: mainXhrManager.insertScripts(): " + e);
+                    dojo.debugShallow(scriptTags[i]);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * This object encapsulates all common AOP advice. The manager must remain the single central location
+ * for advice definition, otherwise there's a risk of losing track of some advice applied. Due to nature
+ * of AOP - enhancing existing functionality through external means - it can be confusing where certain
+ * functionality comes from if it weren't defined in the function itself.
+ */
+var mainAdviceManager = {
+    /**
+     * Function used to initialize advice defined in the manager. This, again, must
+     * remain the only place where advice is applied at corresponding pointcuts; otherwise
+     * there's a risk of losing track of some advice applied.
+     *
+     * Initializer is called in onload for the page; see at beginning of this file.
+     */
+    init: function () {
+        dojo.event.connect("around", mainXhrManager, "submit", this, "xhrSubmitAdvice");
+        dojo.event.connect("around", mainXhrManager, "reloadComponent", this, "xhrReloadComponentAdvice");
+    },
+
+    /**
+     * Pointcut: mainXhrManager.submit()
+     *
+     * Stores invocation arguments in a local field, mainXhrManager._lastSubmitParameters;
+     * The arguments can then be reused by the XHR error handler, if the user chooses to
+     * retry the last failed XHR request.
+     *
+     * @see init(), where this advice is woven in
+     */
+    xhrSubmitAdvice: function (invocation) {
+        mainXhrManager._lastSubmitParameters = invocation.args;
+        return invocation.proceed();
+    },
+
+    /**
+     * Pointcut: mainXhrManager.reloadComponent()
+     *
+     * Stores invocation arguments in a local field, mainXhrManager._lastReloadComponentParameters;
+     * The arguments can then be reused by the XHR error handler, if the user chooses to
+     * retry the last failed XHR request.
+     *
+     * @see init(), where this advice is woven in
+     */
+    xhrReloadComponentAdvice: function (invocation) {
+        mainXhrManager._lastReloadComponentParameters = invocation.args;
+        return invocation.proceed();
+    }
+}
+
+/**
+ * This object encapsulates UI event functionality
+ */
+var mainEventManager = {
+    /* prefix for component-related events */
+    _componentEventPrefix: "/component",
+    /* prefix for page-related events */
+    _pageEventPrefix: "/page",
+    /* event name separator */
+    _separator: "/",
+
+    /* field used by reload handlers to keep track of current state of reloading */
+    _isReloading: false,
+    /* delay after which to show the reload label */
+    _reloadLabelDelay: 3000,
+
+    /**
+     * Initializer for the event manager. Contains all event assignments; called in page onLoad event.
+     */
+    init: function () {
+        //add component submit listeners (to show reload label)
+        this.addGenericComponentListener("xhrSubmit/start", dojo.lang.hitch(this, "_reloadStartHandler"));
+        this.addGenericComponentListener("xhrSubmit/done", dojo.lang.hitch(this, "_reloadDoneHandler"));
+
+        //add component reload listeners (to show reload label)
+        this.addGenericComponentListener("xhrReload/start", dojo.lang.hitch(this, "_reloadStartHandler"));
+        this.addGenericComponentListener("xhrReload/done", dojo.lang.hitch(this, "_reloadDoneHandler"));
+
+        //add session reset listener (to reset session expiration countdouwn message)
+        this.addGenericComponentListener("xhrSubmit/done", dojo.lang.hitch(this, "_sessionResetHandler"));
+        this.addGenericComponentListener("xhrReload/done", dojo.lang.hitch(this, "_sessionResetHandler"));
+    },
+
+    /**
+     * Use this function to publish a component-related event.
+     * @param component - JSON object representing the component for which an event is to be issued
+     * @param topicSuffix - arbitrary topic suffix; appended to component prefix to compose a full topic name
+     *                      This suffix must correspond to subscription suffix (e.g., see mainEventManager.addGenericComponentListener())
+     */
+    publishComponentEvent: function (component, topicSuffix) {
+        dojo.event.topic.publish(this._componentEventPrefix + this._separator + component.uid + this._separator + topicSuffix, component);
+        dojo.event.topic.publish(this._componentEventPrefix + this._separator + topicSuffix, component);
+    },
+
+    /**
+     * Adds a listener for a generic component event (event issued by any component);
+     * @param topicSuffix - suffix must correspond to suffix with which event was issued (see mainEventManager.publishComponentEvent())
+     * @param listenerFunction - handler function definition; this function will be called when event fires
+     */
+    addGenericComponentListener: function (topicSuffix, listenerFunction) {
+        dojo.event.topic.subscribe(this._componentEventPrefix + this._separator + topicSuffix, listenerFunction);
+    },
+
+    /**
+     * Adds a listener for an exact component event (event issued by a particular component);
+     * @param component - JSON object representing the component whose event we want to listen to
+     * @param topicSuffix - suffix must correspond to suffix with which event was issued (see mainEventManager.publishComponentEvent())
+     * @param listenerFunction - handler function definition; this function will be called when event fires
+     */
+    addExactComponentListener: function (component, topicSuffix, listenerFunction) {
+        dojo.event.topic.subscribe(this._componentEventPrefix + this._separator + component.uid + this._separator + topicSuffix, listenerFunction);
+    },
+
+    /**
+     * Function used to publish page-wide events.
+     * @param topicSuffix - arbitrary topic suffix; appended to page prefix to compose a full topic name.
+     *                      This suffix must correspond to subscription suffix
+     */
+    publishPageEvent: function (topicSuffix, extraAttribute) {
+        dojo.event.topic.publish(this._pageEventPrefix + this._separator + topicSuffix, extraAttribute);
+    },
+
+    /**
+     * Adds a listener to a page-wide event.
+     * @param topicSuffix - suffix must correspond to suffix with which event was issued (see mainEventManager.publishPageEvent())
+     * @param listenerFunction - handler function definition; this function will be called when event fires
+     */
+    addPageListener: function (topicSuffix, listenerFunction) {
+        dojo.event.topic.subscribe(this._pageEventPrefix + this._separator + topicSuffix, listenerFunction);
+    },
+
+    /**
+     * A handler function. Marks the start point of a reload event, to show a delayed reload label
+     * @see mainEventManager.init() for assignment
+     */
+    _reloadStartHandler: function () {
+        this._isReloading = true;
+        dojo.lang.setTimeout(function () {
+            if (mainEventManager._isReloading) {
+                showPageLoadWarningLabel();
+                this._isReloading = false;
+            }
+        }, this._reloadLabelDelay);
+    },
+
+    /**
+     * A handler function. Marks the end point of a reload event, to hide reload label
+     * @see mainEventManager.init() for assignment
+     */
+    _reloadDoneHandler: function () {
+        this._isReloading = false;
+        hidePageLoadWarningLabel();
+    },
+
+    /**
+     * A handler function. Postpones UI session timeout message when an XHR operation completes
+     * @see mainEventManager.init() for assignment
+     * @jira EWMS-7767
+     */
+    _sessionResetHandler: function () {
+        mainSessionTimeoutManager.postponeTimeout();
+    }
+}
+
+/**
+ * Namespace object to encapsulate all logic related to page-wide UI and lifecycle functionality.
+ * Introduced with an ultimate strategy to relocate all global scoped common functions under
+ * this object's namespace, such as focussing logic, validation-related methods, menu-scrolling, etc.
+ * such that global namespace does not contain any functions except for native JS (i.e. parseInt, setTimeout, etc.)
+ */
+var mainPageManager = {
+    /* event corresponds to a UI logical event of the point
+     * in time just after validation message is rendered */
+    EVENT_AFTER_VALIDATION_NOTICE: "afterValidationNotice"
+}
+
+/**
+ * Object encapsulates session timeout message related UI logic. Collaborating code
+ * can be found in UtilityFooter component template.
+ */
+var mainSessionTimeoutManager = {
+    /*set in UtilityFooter*/
+    _expiryBuffer: null,
+    /*set in UtilityFooter*/
+    _timeTillTimeout: null,
+    /*set in UtilityFooter*/
+    _servletPath: null,
+
+    _timeoutLeft: null,
+    _timeoutLastCalled: null,
+    _postponeTimeoutTime: null,
+    _countingTimeout: false,
+
+    /**
+     * Starts countdown on immediate page load; see UtilityFooter for initial call
+     */
+    startTimeoutCounter: function () {
+        this._timeoutLeft = this._expiryBuffer;
+        var timeoutPeriod = (this._timeTillTimeout - this._expiryBuffer) * 1000;
+
+        if (this._timeTillTimeout >= this._expiryBuffer) {
+            setTimeout("mainSessionTimeoutManager._displaySessionTimeout()", timeoutPeriod);
+        }
+    },
+
+    /**
+     * Displays session timeout message, and starts countdown till actual expiration
+     */
+    _displaySessionTimeout: function () {
+        //since this is called regardless of external state, we have to check
+        //if session postpone logic was initiated; quit if so
+        if (this._checkTimeoutPostponed()) {
+            return;
+        }
+
+        elem('sessionTimeoutLabel').className = 'sessionTimeout';
+        elem('sessionTimeoutIFrame').className = 'sessionTimeout';
+        this._countingTimeout = true;
+        this._countDownTimeout();
+        window.focus();
+    },
+
+    /**
+     * A check function to confirm whether postponeTimeout() was called anywhere in between
+     * the point in time where startTimeoutCounter() was called, and _displaySessionTimeout()
+     * was actuall invoked.
+     */
+    _checkTimeoutPostponed: function () {
+        return (this._postponeTimeoutTime != null) &&
+            (this._postponeTimeoutTime > new Date().getTime() - (this._timeTillTimeout - this._expiryBuffer) * 1000);
+    },
+
+    /**
+     * This function can be called to postpone session expiry countdown;
+     * Used to reset the timer when XHR communications are being performed
+     *
+     * @see mainEventManager._sessionResetHandler() for invoking code
+     * @jira EWMS-7767
+     */
+    postponeTimeout: function () {
+        this._postponeTimeoutTime = new Date();
+
+        if (this._countingTimeout) {
+            this.hideTimeoutMessage();
+        }
+        this.startTimeoutCounter();
+    },
+
+    _countDownTimeout: function () {
+        if (!this._countingTimeout) {
+            return;
+        } //don't do anything if we cancelled counting down: reviveClientSession() was called-->
+
+        //some safeguards when (timeTillTimeout-expiryBuffer) is close to 0-->
+        if (new Date().getTime() - this._timeoutLastCalled < 900) {
+            return;
+        }
+
+        var tmp = elem('timeoutLeft'); //display time left-->
+
+        try {
+            tmp.removeChild(tmp.firstChild);
+        } catch (e) {
+        }
+
+        tmp.appendChild(document.createTextNode(this._timeoutLeft));
+
+        if (this._timeoutLeft > 0) { //if still time left, do again in 1 second-->
+            this._timeoutLeft--;
+            setTimeout("mainSessionTimeoutManager._countDownTimeout()", 1000);
+        } else { //otherwise stop counting down, and show session expiration notice-->
+            elem('timeoutMessage1').className = 'hidden';
+            elem('timeoutMessage2').className = '';
+            elem('reviveSessionLink').className = 'hidden';
+            this._countingTimeout = false;
+
+            var logoutUrl = this._servletPath + "/system/logout-user";
+            var dummyImage = new Image();
+            dummyImage.src = logoutUrl;
+
+            if (typeof UpdateHrefPrintPage == 'function') {
+                UpdateHrefPrintPage();
+            }
+        }
+
+        this._timeoutLastCalled = new Date().getTime();
+    },
+
+    /**
+     * Ping the server to keep session alive
+     */
+    reviveClientSession: function () {
+        this._countingTimeout = false; //stop this countdown
+
+        //call server to revive session -->
+        var pingURL = this._servletPath + "/system/ping-server";
+        var dummyImage = new Image();
+        dummyImage.src = pingURL;
+
+        //and then start the new countdown
+        this.startTimeoutCounter();
+        this.hideTimeoutMessage();
+
+        return false;
+    },
+
+    /**
+     * Hides session expiry message
+     */
+    hideTimeoutMessage: function () {
+        elem("sessionTimeoutLabel").className = 'hidden';
+        elem("sessionTimeoutIFrame").className = 'hidden';
+        return false;
+    }
+}
+
+/* DHTML ToolTip functions */
+function findAbsPosX(obj) {
+    var curleft = 0;
+    if (obj.offsetParent) {
+        while (obj.offsetParent) {
+            curleft += obj.offsetLeft;
+            obj = obj.offsetParent;
+        }
+    } else if (obj.x) {
+        curleft += obj.x;
+    }
+    return curleft;
+}
+
+function findAbsPosY(obj) {
+    var curtop = 0;
+    if (obj.offsetParent) {
+        while (obj.offsetParent) {
+            curtop += obj.offsetTop;
+            obj = obj.offsetParent;
+        }
+    } else if (obj.y) {
+        curtop += obj.y;
+    }
+    return curtop;
+}
+
+function showToolTip(tooltipId, parentId, posX, posY) {
+    var SCREEN_HEIGHT_RESOLUTION = 768;
+    var WIDTH_OF_SCROLLBOX = 17;
+    var HEIGHT_OF_SPACE_TOP_BOTTOM = 300;
+    var WIDTH_OF_SPACE_LEFT_RIGHT = 193;
+
+    var it = document.getElementById(tooltipId);
+    var screenWidthResolution = document.getElementById(tooltipId + "_screenWidthRes");
+
+    // We need to make the hidden node an immediate child of the body node
+    if (it.parentNode != document.body) {
+        document.body.appendChild(it.parentNode.removeChild(it));
+    }
+    if ((it.style.top == '' || it.style.top == 0)
+        && (it.style.left == '' || it.style.left == 0)) {
+        // need to fixate default size (MSIE problem)
+        if (/msie/i.test(navigator.userAgent)) {
+            var toolTipWidth = it.offsetWidth;//the Width value by default
+            var widthByScreen = screenWidthResolution.offsetWidth - WIDTH_OF_SPACE_LEFT_RIGHT;
+            if (toolTipWidth < widthByScreen) {
+                toolTipWidth = widthByScreen;
+            }
+            if (toolTipWidth < 0) {
+                toolTipWidth = toolTipWidth * (-1) + 500;
+            }
+            it.style.width = toolTipWidth + 'px';
+
+            var toolTipHeight = it.offsetHeight;
+            var heightByScreen = SCREEN_HEIGHT_RESOLUTION - HEIGHT_OF_SPACE_TOP_BOTTOM;
+            if (toolTipHeight > heightByScreen) {
+                toolTipHeight = heightByScreen;
+                it.style.overflow = 'scroll';
+                it.style.overflowY = 'scroll';
+                it.style.overflowX = 'hidden';
+                toolTipWidth += WIDTH_OF_SCROLLBOX;
+                it.style.width = toolTipWidth + 'px';
+            }
+            it.style.height = toolTipHeight + 'px';
+        }
+
+        it.style.top = 10 + 'px';
+        it.style.left = 100 + 'px';
+    }
+    it.style.visibility = 'visible';
+}
+
+function hideToolTip(id) {
+    var it = document.getElementById(id);
+    it.style.visibility = 'hidden';
+}
+
+function screenSize() {
+    var w, h;
+    w = (window.innerWidth ? window.innerWidth : (document.documentElement.clientWidth ? document.documentElement.clientWidth : document.body.offsetWidth));
+    h = (window.innerHeight ? window.innerHeight : (document.documentElement.clientHeight ? document.documentElement.clientHeight : document.body.offsetHeight));
+    return {w: w, h: h};
+}
+/* ToolTip functions end */
+
+/*cross browser function to add an DHTML event handler*/
+function addListener(control, eventName, handler) {
+    if (control === String(control)) {
+        control = elem(control);
+    }
+
+    if (control.addEventListener) {//Standard W3C
+        return control.addEventListener(eventName, handler, false);
+    } else if (control.attachEvent) {//IExplore
+        return control.attachEvent("on" + eventName, handler);
+    } else {
+        return false;
+    }
+}
+/*cross browser function to remove an DHTML event handler*/
+function removeListener(control, eventName, handler) {
+    if (control === String(control)) {
+        control = elem(control);
+    }
+
+    if (control.removeEventListener) {//Standard W3C
+        return control.removeEventListener(eventName, handler, false);
+    } else if (control.detachEvent) {//IExplore
+        return control.detachEvent("on" + eventName, handler);
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Substitute for richfaces' "focus" attribute; allows specifying a fallback element,
+ * if the main element isn't present. Also, guaranteed to set focus despite "rerender" on the same component.
+ * Usage: ... oncomplete="bootstrapFocus(${rich:element('main-elem')}, ${rich:element('fallback-elem')})"
+ */
+function bootstrapFocus(mainElem, fallbackElem) {
+    //set delay to make sure all IE events are finished before setting focus
+    setTimeout('setHardFocus("' + mainElem.id + '", "' + fallbackElem.id + '")', 60);
+}
+
+/**
+ * Used by bootstrapFocus()
+ */
+function setHardFocus(mainId, fallbackId) {
+    try {
+        document.getElementById(mainId).focus();
+        document.getElementById(mainId).blur();
+        document.getElementById(mainId).focus();
+    } catch (e) {
+        try {
+            document.getElementById(fallbackId).focus();
+            document.getElementById(fallbackId).blur();
+            document.getElementById(fallbackId).focus();
+        } catch (e) {
+        }
+    }
+}
+
+if (!Array.prototype.indexOf) {
+    Array.prototype.indexOf = function (elt /*, from*/) {
+        var len = this.length;
+        var from = Number(arguments[1]) || 0;
+        from = (from < 0) ? Math.ceil(from) : Math.floor(from);
+        if (from < 0) {
+            from += len;
+        }
+        for (; from < len; from++) {
+            if (from in this && this[from] === elt) {
+                return from;
+            }
+        }
+
+        return -1;
+    };
+}
+
+function changeUserDateToCalendarFormat(date) {
+    // aux array for month names
+    var CalendarEn = new Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+    var CalendarFr = new Array("Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Juil", "Aout", "Sep", "Oct", "Nov", "Dec");
+
+    var month = date.split("-")[1];
+    var numericMonth = CalendarEn.indexOf(month) + 1
+
+    if (numericMonth == 0) {
+        numericMonth = CalendarFr.indexOf(month) + 1;
+    }
+
+    if (numericMonth > 0) {
+        if (numericMonth < 10) {
+            numericMonth = "0" + numericMonth;
+        }
+        return date.replace(month, numericMonth);
+    }
+
+    return date;
+}
+
+function showOrHideSection(sectionId, isVisible) {
+    var section = elem(sectionId);
+    if (section == null) {
+        return;
+    }
+
+    if (isVisible) {
+        section.style.visibility = 'visible';
+        section.style.display = 'block';
+    } else {
+        section.style.visibility = 'hidden';
+        section.style.display = 'none';
+    }
+}
+
+function setUpDownImage(imageId, isUpArrow) {
+    var image = elem(imageId);
+    if (image == null) {
+        return;
+    }
+
+    var servletPath = mainSessionTimeoutManager._servletPath;
+
+    if (isUpArrow) {
+        image.src = servletPath + '/files/images/arrow_up.gif';
+    } else {
+        image.src = servletPath + '/files/images/arrow_down.gif';
+    }
+}
+
+function clickOnImgSaveToHiddenField(sectionId, indicatorId, imageId, servletPath) {
+    var indicator = elem(indicatorId);
+
+    indicator.value = hiddenNodeToggler.toggleElementHiddenDetails(sectionId, servletPath, imageId);
+}
+
+function showOrHideSectionByImageIndicator(sectionId, indicatorId, imageId) {
+    var section = elem(sectionId);
+    var indicator = elem(indicatorId);
+    var image = elem(imageId);
+    if (section == null || indicator == null || image == null) {
+        return;
+    }
+
+    var isVisible = (indicator.value == "true");
+    setUpDownImage(imageId, isVisible);
+    showOrHideSection(sectionId, isVisible);
+}
+
+/*
+ Following code mimics the behaviour of document.getElementById function for IE browser.
+ It first searches DOM element by its 'id' attribute.
+ If 'id' attribute is not present, it searches DOM element by its 'name' attribute.
+ */
+document._oldGetElementById = document.getElementById;
+document.getElementById = function (elemIdOrName) {
+    var result = document._oldGetElementById(elemIdOrName);
+    if (!result) {
+        var elems = document.getElementsByName(elemIdOrName);
+        if (elems && elems.length > 0) {
+            result = elems[0];
+        }
+
+    }
+
+    return result;
+};
+
+/**
+ * Function used in components with lists w/ hidden details (see C6 in Style Reference).
+ * Script is called from an onclick event of the image that causes the toggle. The image's @id
+ * attribute should be a concatenation of the following: "img", its sequential number, servlet name, and
+ * the uniqueID of the component. E.g. id="img155abcd", where '155' is the seqNum, and 'abcd' is the componentUID.
+ * This function is used for hiding and making visible entire table rather than single row in the table.
+ * @param seqNum - sequential number
+ * @param servlet - servlet name. E.g. "/upm"
+ * @param compID - component's unique ID; used so that image ID's do not duplicate
+ *                    on the page if used in several components on the page.
+ */
+function toggleHiddenDetailsForTable(seqNum, servlet, compID) {
+    var downArrow = '/files/images/arrow_down.gif';
+    var upArrow = '/files/images/arrow_up.gif';
+    var image = elem('img' + seqNum + compID);
+    var row = elem('row' + seqNum + compID);
+    var pos = image.src.indexOf(servlet + '/');
+    var src = image.src.substring(pos);
+    if (src == servlet + downArrow) {
+        row.style.visibility = (!document.all) ? 'visible' : 'visible';
+        row.style.position = (!document.all) ? 'static' : 'static';
+        //block in IE, table-row in Mozilla
+        image.src = servlet + upArrow;
+        row.style.visibility = 'visible';
+        row.style.position = 'static';
+        row.style.display = 'table';
+    } else {
+        row.style.visibility = 'hidden';
+        row.style.position = 'absolute';
+        row.style.left = '-9999px';
+        image.src = servlet + downArrow;
+        row.style.visibility = 'hidden';
+        row.style.position = 'absolute';
+        row.style.left = '-9999px';
+        row.style.display = 'none';
+    }
+}
+
+/**
+ * Function is used to get value of text node independent of browser.
+ * It returns value same as innerText property in IE, Chrome and textContent property in Firefox.
+ * This function was added as part of cross browser compatibility project.
+ *
+ * @param domElement - DOM element
+ */
+function getTextNodeValue(domElement) {
+    return domElement.textContent || domElement.innerText || '';
+}
+
+/**
+ * Function is used to set text value for DOM element independent of browser.
+ * It sets value to 'innerText' property in IE, Chrome and to 'textContent' property in Firefox.
+ * This function was added as part of cross browser compatibility project.
+ *
+ * @param domElement - DOM element
+ * @param valueString - text value to set
+ */
+function setTextNodeValue(domElement, valueString) {
+    // For IE and Chrome
+    if (domElement.innerText != undefined) {
+        domElement.innerText = valueString;
+    } else { // For Firefox
+        domElement.textContent = valueString;
+    }
+}
+
+/**
+ * Function is used to shorten text value for DOM elements on the page.
+ * If the value exceeds maxLength, it is shortened and ellipses are added at the end.
+ *
+ * This function is added as part of PMO-9624 to use JavaScript functions compatible with IE8
+ *
+ * @param selectors is a string containing one or more CSS selectors separated by commas
+ * @param maxLength maximum length allowed for values in selected DOM elements
+ */
+function shortenDisplayText(selectors, maxLength) {
+    if (maxLength < 4) { // return if maxLength is too short to introduce ellipses
+        return;
+    }
+    var invs = document.querySelectorAll(selectors);
+    for (var i = 0; i < invs.length; i++) {
+        if (getTextNodeValue(invs[i]).length > maxLength) {
+            invs[i].title = getTextNodeValue(invs[i]);
+            invs[i].innerHTML = invs[i].innerHTML.substr(0, (maxLength - 3)) + "...";
+        }
+    }
+}
+
+/**
+ * Check if the input string is a valid SIN.
+ *
+ * Note: This function does NOT include logic for formatting and updating SIN input value.
+ * Instead, to get a String in SIN format, please call function formatSINString.
+ *
+ * @param sinString
+ * @return {boolean}
+ */
+function validateSIN(sinString) {
+    var isValid = false;
+    var reSIN = /^[012345679]\d{1,8}$/;  //SIN regex pattern
+    var modulus = 0;
+
+    var sinNumber = removeNonDigits(sinString);
+    if (reSIN.test(sinNumber) && sinNumber.length == 9) {
+        //modulus calculation
+        for (var i = 0; i < 7; i += 2) {
+            modulus += sinNumber.charAt(i) * 1 + convertSINNumber(sinNumber.charAt(i + 1));
+        }
+        modulus = (10 - modulus % 10) % 10;
+        isValid = modulus == sinNumber.charAt(8) * 1;
+    }
+
+    return isValid;
+}
+
+/**
+ * Convert SIN Number
+ *
+ * @param symb String
+ * @return {number}
+ */
+function convertSINNumber(symb) {
+    var retVal = symb * 2;
+    if (retVal > 9) {
+        retVal = 1 + retVal % 10;
+    }
+
+    return retVal;
+}
+
+/**
+ * remove all non-digit characters from the input string
+ *
+ * @param input String
+ * @return {string} contains only digital characters
+ */
+function removeNonDigits(input) {
+    return input.replace(/\D/g, "")
+}
+
+/**
+ * convert the input string into a formatted SIN string
+ * If the input string contains more or less than 9 digits, this function just returns the original input.
+ *
+ * @param input String
+ * @return {string}
+ */
+function formatSINString(input) {
+    var sinNumber = removeNonDigits(input);
+    return (sinNumber.length != 9) ? input : sinNumber.substr(0, 3) + "-" + sinNumber.substr(3, 3) + "-" + sinNumber.substr(6, 3);
+}
+
+/**
+ * Function to add new function into existing window.onload function.
+ *
+ * @param newFunction New Function Name
+ */
+function addWindowOnLoadEvent(newFunction) {
+    var originalOnLoad = window.onload;
+    if (typeof window.onload != 'function') {
+        window.onload = newFunction;
+    } else {
+        window.onload = function () {
+            if (originalOnLoad) {
+                originalOnLoad();
+            }
+            newFunction();
+        }
+    }
+}
+
+/**
+ * * This is used to get cookie value based on cookie name
+ *
+ *
+ * @param cookie name
+ * @return cookie value
+ */
+function getCookie(name) {
+    var parts = document.cookie.split(name + "=");
+    if (parts.length == 2) return parts.pop().split(";").shift();
+}
+
+/**
+ * * This is used expire a cookie
+ *
+ *
+ * @param cookie name
+ */
+function expireCookie(cName) {
+    document.cookie =
+        encodeURIComponent(cName) +
+        "=deleted; expires=" +
+        new Date(0).toUTCString();
+}
+
+/**
+ * * This is used to prevent spinner box problem by waiting for a cookie from the server.
+ *
+ *
+ */
+function downloadFinishListener() {
+    var downloadToken = new Date().getTime();
+    var downloadTimer;
+
+    createStartDownloadCookie(downloadToken);
+
+    downloadTimer = window.setInterval(function () {
+
+        var token = getCookie("downloadToken");
+
+        if (token == downloadToken) {
+            window.clearInterval(downloadTimer);
+            expireCookie("downloadToken");
+            expireCookie("startDownloadToken");
+            hidePageLoadWarningLabel();
+        }
+    }, 2000);
+}
+
+/**
+ * It used to put download token Id in cookie.
+ *
+ */
+function createStartDownloadCookie(tokenId) {
+    document.cookie = "startDownloadToken=" + tokenId + "; path=/";
+}
+
+/**
+ * Function to set field mandatory.
+ *
+ * @param paramPrefix Parameter Prefix
+ * @param fieldName Field Name
+ * @param fieldLabelName Field Label Name
+ * @param label Label
+ * @param isMandatory Is Mandatory?
+ */
+function setFieldMandatory(paramPrefix, fieldName, fieldLabelName, label, isMandatory) {
+    var fieldNameElement = elem(paramPrefix + fieldName);
+    var fieldLabelNameElement = elem(paramPrefix + fieldLabelName);
+
+    if (isMandatory) {
+        if (fieldNameElement) {
+            fieldNameElement.className += " required";
+        }
+        if (fieldLabelNameElement) {
+            fieldLabelNameElement.innerHTML = "* " + label + ":";
+        }
+    } else {
+        if (fieldNameElement) {
+            fieldNameElement.className = fieldNameElement.className.replace(/required/g, '');
+        }
+        if (fieldLabelNameElement) {
+            fieldLabelNameElement.innerHTML = label + ":";
+        }
+    }
+}
+
+/**
+ * Function to remove selected values of target multiple select element that is existing from source multiple select element selected values.
+ *
+ * @param sourceElem Source Multiple Select Element
+ * @param targetElem Target Multiple Select Element
+ */
+function removeTargetElementSelectedFromSourceElement(sourceElem, targetElem) {
+    for (var i = 0; i < sourceElem.options.length; i++) {
+        if (sourceElem.options[i].selected) {
+            for (var j = 0; j < targetElem.options.length; j++) {
+                if (targetElem.options[i].selected && sourceElem.options[i].value == targetElem.options[j].value) {
+                    targetElem.options[j].selected = false;
+                }
+            }
+        }
+    }
+}

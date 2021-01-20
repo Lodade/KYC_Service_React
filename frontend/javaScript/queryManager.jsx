@@ -1,3 +1,8 @@
+/*
+This function takes in any sql statement used in the program.
+With this, it returns the query result from the database
+pertaining to the given statement.
+*/
 async function queryProcess(query) {
     let response = await fetch("/query", {
         method: "POST",

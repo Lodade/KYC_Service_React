@@ -3,6 +3,12 @@ function resultsBuilder() {
     let condensedResult;
     let accountResults;
     return {
+        /*
+        This function takes in an object which contains most of the details
+        about the mutual fund result. With this, it outputs an array which contains
+        the two strings which identify what the resulting mutual fund from the
+        search was.  
+        */
         resultsHeaderPopulator: function (resultObject) {
             let classHolder;
             let seriesHolder;
@@ -23,6 +29,14 @@ function resultsBuilder() {
                 " Series: " + seriesHolder + " Load: " + resultObject.LOAD_TYPE;
             return result;
         },
+        /*
+        This function takes in an object which contains minimal details
+        about the mutual fund result. With this, it returns an array 
+        containing one object which has most of the details
+        about the mutual fund excluding cnAccounts status,
+        niAccounts status, eligible Transactions, eligible 
+        provinces and eligible product models. 
+        */
         resultsDetailsPopulator: async function (resultObject) {
             query = "SELECT prod.*, fpte.FULL_PROD_TYPE, flte.FULL_LOAD_TYPE, mins.*, elig.DIV_FREQ, elig.DIV_OPT_1," +
                 " elig.DIV_OPT_4, elig.DIV_OPT_5, fce.FULL_CURRENCY" +
@@ -33,6 +47,12 @@ function resultsBuilder() {
             let fullResults = await queryProcess(query);
             return fullResults;
         },
+        /*
+        This function takes in an object which contains minimal details
+        about the mutual fund result. With this, it returns an object 
+        with 21 properties, each describing if the selected mutual fund
+        can reside in that number's account type.
+        */
         cnAccountsPopulator: async function (resultObject) {
             condensedResult = {
                 "01": "No", "02": "No", "04": "No", "05": "No",
@@ -48,6 +68,12 @@ function resultsBuilder() {
             }
             return condensedResult;
         },
+        /*
+        This function takes in an object which contains minimal details
+        about the mutual fund result. With this, it returns an object 
+        with 21 properties, each describing if the selected mutual fund
+        can reside in that number's account type.
+        */
         niAccountsPopulator: async function (resultObject) {
             condensedResult = {
                 "01": "No", "02": "No", "04": "No", "05": "No",
@@ -63,6 +89,12 @@ function resultsBuilder() {
             }
             return condensedResult;
         },
+        /*
+        This function takes in an object which contains minimal details
+        about the mutual fund result. With this, it returns an object 
+        with 13 properties, each describing if the selected mutual fund
+        is available in the corresponding province.
+        */
         eligProvincesPopulator: async function (resultObject) {
             condensedResult = {
                 AB: "No", BC: "No", MB: "No", NB: "No",
@@ -77,6 +109,12 @@ function resultsBuilder() {
             }
             return condensedResult;
         },
+        /*
+        This function takes in an object which contains minimal details
+        about the mutual fund result. With this, it returns an object 
+        with 16 properties, each describing if the selected mutual fund
+        is allowed to undergo the designated transaction.
+        */
         eligibleTrxnsPopulator: async function (resultObject) {
             condensedResult = {
                 B: "Not Allowed", CR: "Not Allowed", SI: "Not Allowed", SO: "Not Allowed",
@@ -95,11 +133,25 @@ function resultsBuilder() {
             }
             return condensedResult;
         },
+        /*
+        This function takes in an object which contains minimal details
+        about the mutual fund result. With this, it returns an array 
+        containing potentially multiples objects, one for each model
+        the mutual fund has.
+        */
         eligibleProdModelsPopulator: async function (resultObject) {
             query = "SELECT * FROM fsrv_prod_model model WHERE model.SEQ_ID=('" + resultObject[0].FSRV_ID + "')";
             let productModels = await queryProcess(query);
+            console.log(productModels);
             return productModels;
         },
+        /*
+        This function takes in an object containing the states of
+        different possible properties about a mutual fund and a string
+        which describes what the "yes" or "ok" state is. With these,
+        it outputs what status colour should be assigned to that set
+        of properties.
+        */
         statusUpdate: async function(objectToCheck, statement){
             let result = "redStatusBackground";
             let foundOne = false;

@@ -5,6 +5,8 @@
 :root {
 	--displayAreaHeight: 93.7vh;
 	--displayAreaWidthAt1250px: 91vw;
+	--displayAreaWidth600px-1250px: 82vw;
+	--displayAreaWidthUnder600px: 72vw;
 }
 
 #uploadForm {
@@ -114,6 +116,75 @@
 		height: var(--displayAreaHeight);
 		width: 72vw;
 	}
+	#resultsArea {
+		position: absolute;
+		top: 0vh;
+		left: 0vw;
+		height: var(--displayAreaHeight);
+		width: var(--displayAreaWidthUnder600px);
+		overflow: auto;
+		margin-left: 2vw;
+	}
+	#resultsTable {
+		border-collapse: collapse;
+		margin-left: 2vw;
+		margin-bottom: 2vh;
+	}
+	#resultsTable th {
+		position: sticky;
+		top: 0;
+		padding: 1vh 1vw;
+		background-color: gray;
+		text-align: left;
+		max-width: 20%;
+	}
+	#resultsTable td {
+		border: 1px solid black;
+		padding: 1vh 1vw;
+		text-align: left;
+		max-width: 20%;
+	}
+	#explore_dashboard {
+		margin-left: 2vw;
+		margin-top: 2vh;
+	}
+	#fundCountsArea {
+		overflow: auto;
+		width: var(--displayAreaWidthUnder600px - 2vw);
+		height: 25vh;
+	}
+	#fundDisplayArea {
+		overflow: auto;
+		width: var(--displayAreaWidthUnder600px - 2vw);
+		height: 25vh;
+	}
+	.dashboardTable {
+		border-collapse: separate;
+		border-spacing: 0;
+		margin-bottom: 2vh;
+	}
+	.dashboardTable th:first-child,
+	td:first-child {
+		border-left: 1px solid black;
+	}
+	.dashboardTable th {
+		border-top: 1px solid black;
+		border-bottom: 1px solid black;
+		border-right: 1px solid black;
+		position: sticky;
+		top: 0;
+		padding: 1vh 1vw;
+		background-color: gray;
+		text-align: left;
+		max-width: 20%;
+	}
+	.dashboardTable td {
+		border-right: 1px solid black;
+		border-bottom: 1px solid black;
+		padding: 1vh 1vw;
+		text-align: left;
+		width: 20%;
+	}
 }
 
 @media screen and (min-width: 600px) {
@@ -133,6 +204,75 @@
 		left: 18vw;
 		height: var(--displayAreaHeight);
 		width: 82vw;
+	}
+	#resultsArea {
+		position: absolute;
+		top: 0vh;
+		left: 0vw;
+		height: var(--displayAreaHeight);
+		width: var(--displayAreaWidth600px-1250px);
+		overflow: auto;
+		margin-left: 2vw;
+	}
+	#resultsTable {
+		border-collapse: collapse;
+		margin-left: 2vw;
+		margin-bottom: 2vh;
+	}
+	#resultsTable th {
+		position: sticky;
+		top: 0;
+		padding: 1vh 1vw;
+		background-color: gray;
+		text-align: left;
+		max-width: 20%;
+	}
+	#resultsTable td {
+		border: 1px solid black;
+		padding: 1vh 1vw;
+		text-align: left;
+		max-width: 20%;
+	}
+	#explore_dashboard {
+		margin-left: 2vw;
+		margin-top: 2vh;
+	}
+	#fundCountsArea {
+		overflow: auto;
+		width: var(--displayAreaWidth600px-1250px - 2vw);
+		height: 25vh;
+	}
+	#fundDisplayArea {
+		overflow: auto;
+		width: var(--displayAreaWidth600px-1250px - 2vw);
+		height: 25vh;
+	}
+	.dashboardTable {
+		border-collapse: separate;
+		border-spacing: 0;
+		margin-bottom: 2vh;
+	}
+	.dashboardTable th:first-child,
+	td:first-child {
+		border-left: 1px solid black;
+	}
+	.dashboardTable th {
+		border-top: 1px solid black;
+		border-bottom: 1px solid black;
+		border-right: 1px solid black;
+		position: sticky;
+		top: 0;
+		padding: 1vh 1vw;
+		background-color: gray;
+		text-align: left;
+		max-width: 20%;
+	}
+	.dashboardTable td {
+		border-right: 1px solid black;
+		border-bottom: 1px solid black;
+		padding: 1vh 1vw;
+		text-align: left;
+		width: 20%;
 	}
 }
 

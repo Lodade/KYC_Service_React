@@ -1,3 +1,10 @@
+/*
+This function returns the Explore_Dashboard object which
+allows you to view all of the mutual funds broken down by management company,
+product type, load type, classification type and risk class type. Each of these types
+can also be filtered by their product type, load type, classification type and 
+risk class type respectively.
+*/
 function Explore_Dashboard(props) {
   let dashManager = dashboardManager();
   let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
@@ -28,7 +35,7 @@ function Explore_Dashboard(props) {
   }
 
   async function displayTableUpdate(queryType, queryValue) {
-    let filterPart = await dashManager.filterGrab([prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice], filterNames);
+    let filterPart = await dashManager.filterGrab([prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice], filterNames, true);
     let query = "SELECT CONCAT(MGMT_CODE, FUND_ID), ENG_LONG_NM FROM fsrv_prod f WHERE f." + queryType + "=('" + queryValue + "')" + filterPart;
     changeDisplayContents(await queryProcess(query));
   }
@@ -174,6 +181,11 @@ function Explore_Dashboard(props) {
   })))));
   return page;
 }
+/*
+This function returns the FilterSet react object which contains the filter options of 
+one of the four current filters, designated by the name passed through the props
+*/
+
 
 function FilterSet(props) {
   let piece;
@@ -192,6 +204,11 @@ function FilterSet(props) {
   }, row.htmlText));
   return piece;
 }
+/*
+This function returns the TableHeaders react object which contains the 
+headers for any table object
+*/
+
 
 function TableHeaders(props) {
   let piece;
@@ -201,6 +218,13 @@ function TableHeaders(props) {
   }));
   return piece;
 }
+/*
+This function returns the CountRows react object which contains the row objects
+for the count table. Each row shows the count and distinct count of the mutual funds
+which fall under the row's option, whether that be a product type, load type,
+classification type or risk class type.
+*/
+
 
 function CountRows(props) {
   let piece;
@@ -215,6 +239,12 @@ function CountRows(props) {
   })));
   return piece;
 }
+/*
+This function returns the DisplayRows react object which contains the 
+row objects for the display table. Each row shows the basic information which
+pertains to the mutual fund put on that row based on the chosen count table row
+*/
+
 
 function DisplayRows(props) {
   let piece;
@@ -226,6 +256,12 @@ function DisplayRows(props) {
   })));
   return piece;
 }
+/*
+This function takes in an object and returns an array which contains the
+contents of each property of the object in the order in which each 
+property appears in the original object's keys.
+*/
+
 
 function objToArray(object) {
   let keys = Object.keys(object);
@@ -237,6 +273,13 @@ function objToArray(object) {
 
   return output;
 }
+/*This functions returns the RowContent react object which contains the 
+contents for a single table row. It can return the data it is given
+in normal table cells with no linking, normal table header cells
+or special table cells which when clicked on change the contents of the 
+display table
+*/
+
 
 function RowContent(props) {
   let piece;
@@ -259,6 +302,14 @@ function RowContent(props) {
 
   return piece;
 }
+/*
+This functions returns the Explore_ViewProduct react object which contains
+and swaps the SearchProduct and ResultsArea objects which allows for the 
+user to search for a mutual fund by it's management code and fund id using the
+SearchProduct interface and to view the fund's details using the Results Area
+assuming that they put in a valid fund. 
+*/
+
 
 function Explore_ViewProduct(props) {
   let page;
@@ -399,6 +450,11 @@ function Explore_ViewProduct(props) {
 
   return page;
 }
+/*
+This function returns the SearchProduct react object which contains the interface
+for a user to search for mutual funds using the management code and fund id
+*/
+
 
 function SearchProduct(props) {
   let page = /*#__PURE__*/React.createElement("div", {
@@ -416,6 +472,12 @@ function SearchProduct(props) {
   })));
   return page;
 }
+/*
+This function returns the ResultsArea react object which contains the table
+for displaying all of the technical details about the particular mutual fund that
+was searched for in the SearchProduct interface
+*/
+
 
 function ResultsArea(props) {
   let resultsManager = resultsBuilder();
@@ -663,23 +725,33 @@ function ResultsArea(props) {
     className: "hiddenDividends dividends"
   }, /*#__PURE__*/React.createElement("td", null, "Dividend Frequency"), /*#__PURE__*/React.createElement("td", {
     id: "DIV_FREQ"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, props.fullResults.DIV_FREQ)), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenDividends dividends"
   }, /*#__PURE__*/React.createElement("td", null, "Distribution Offered - Reinvest"), /*#__PURE__*/React.createElement("td", {
     id: "DIV_OPT_1"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, props.fullResults.DIV_OPT_1)), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenDividends dividends"
   }, /*#__PURE__*/React.createElement("td", null, "Distribution Offered - Cash"), /*#__PURE__*/React.createElement("td", {
     id: "DIV_OPT_4"
-  })), /*#__PURE__*/React.createElement("tr", {
+  }, props.fullResults.DIV_OPT_4)), /*#__PURE__*/React.createElement("tr", {
     className: "hiddenDividends dividends"
   }, /*#__PURE__*/React.createElement("td", null, "Distribution Offered - Redirection"), /*#__PURE__*/React.createElement("td", {
     id: "DIV_OPT_5"
-  })))));
+  }, props.fullResults.DIV_OPT_5)))));
   return page;
 }
 
-function fileUpload() {
+function PageIntegrator(props) {
+  let piece = /*#__PURE__*/React.createElement("p", null, "\"Test\"");
+  return piece;
+}
+/*
+This function returns the FileUpload react object that allows for
+xml files to be uploaded to the Node.js middleware but is currently unused
+*/
+
+
+function FileUpload() {
   let page = /*#__PURE__*/React.createElement("div", {
     id: "manage"
   }, /*#__PURE__*/React.createElement("form", {

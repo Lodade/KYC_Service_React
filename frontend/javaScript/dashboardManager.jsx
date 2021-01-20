@@ -1,5 +1,11 @@
 function dashboardManager() {
-
+    /*
+    This function takes in the current choices of each of the filters,
+    the names of each filter and if the sql statement it will attach to
+    already has a where statement or not. With those, it assembles an
+    sql statement which narrows the query's results to only those 
+    included in the combination of filters.
+    */
     async function queryFilterAssembler(choices, filters, hasWhere) {
         let statement = " ";
         let noFiltering = true;
@@ -29,10 +35,23 @@ function dashboardManager() {
         return statement;
     }
     return {
-        filterGrab: async function(choices, filters){
-            let result = await queryFilterAssembler(choices, filters, true);
+        /*
+        This function returns the results of the queryFilterAssembler function. It's
+        purpose is to expose the queryFilterAssembler function to any scope which can see
+        an instance of dashboardManager while still keeping queryFilterAssembler
+        encapsulated in the dashboardManager function so that it can be used
+        by any of the functions being returned
+        */
+        filterGrab: async function(choices, filters, hasWhere){
+            let result = await queryFilterAssembler(choices, filters, hasWhere);
             return result;
         },
+        /*
+        This function takes in the name of the particular filter and if the 
+        filter's options have any enumeration. With those, it outputs an array
+        of all of the options available for that filter for initial setup
+        purposes.
+        */
         filterListSetup: async function (name, hasEnum) {
             let query;
             let filterList = [];
@@ -58,6 +77,13 @@ function dashboardManager() {
             }
             return filterList;
         },
+        /*
+        This function takes in the currently designated button type and
+        returns an array of strings which correspond to the headers for 
+        each column of the count table and change depending on if the table
+        is currently breaking down the mutual funds by managment company,
+        product type, load type, classification or risk class 
+        */
         headerChooser: async function (buttonType) {
             let headers = [];
             switch (buttonType) {
@@ -83,9 +109,14 @@ function dashboardManager() {
             }
             return headers;
         },
+        /*
+        This function takes in the currently designated button type, the names of
+        the available filters and current choice of each of the filters. With these,
+        it returns an array of objects, with each object containing the information
+        pertaining to one row in the counts table. 
+        */
         queryChooser: async function (buttonType, filters, choices) {
             let query;
-            let headers;
             let filterPart = "";
             let copy = "";
 
@@ -101,7 +132,6 @@ function dashboardManager() {
                     query = "SELECT DISTINCT(MGMT_CODE)," + " (SELECT COUNT(*) FROM fsrv_prod f2 WHERE f2.MGMT_CODE=f.MGMT_CODE" +
                         copy + ") FUND_COUNT," + " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.MGMT_CODE=f.MGMT_CODE" +
                         copy + ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f" + filterPart;
-                    headers = ["Mgmt Code", "Fund Count", "Distinct Fund Count"];
                     break;
 
                 case "prodType":
@@ -114,7 +144,6 @@ function dashboardManager() {
                         " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.PROD_TYPE=f.PROD_TYPE" + copy +
                         ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f, fsrv_prod_type_enum fe" + " WHERE fe.PROD_TYPE=f.PROD_TYPE"
                         + filterPart;
-                    headers = ["Product Type", "Full Name", "Fund Count", "Distinct Fund Count"];
                     break;
 
                 case "loadType":
@@ -127,7 +156,6 @@ function dashboardManager() {
                         " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.LOAD_TYPE=f.LOAD_TYPE" + copy +
                         ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f, fsrv_load_type_enum fe " + " WHERE fe.LOAD_TYPE=f.LOAD_TYPE"
                         + filterPart;
-                    headers = ["Load Type", "Full Name", "Fund Count", "Distinct Fund Count"];
                     break;
 
                 case "classification":
@@ -140,7 +168,6 @@ function dashboardManager() {
                         ") FUND_COUNT," + " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.CLASSIFICATION=f.CLASSIFICATION" +
                         copy + ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f, fsrv_classification_enum fe" +
                         " WHERE fe.CLASSIFICATION=f.CLASSIFICATION" + filterPart;
-                    headers = ["Classification", "Full Name", "Fund Count", "Distinct Fund Count"];
                     break;
 
                 case "risk":
@@ -154,8 +181,6 @@ function dashboardManager() {
                     query = "SELECT DISTINCT(RISK_CLASS)," + " (SELECT COUNT(*) FROM fsrv_prod f2 WHERE f2.RISK_CLASS=f.RISK_CLASS" + copy +
                         ") FUND_COUNT," + " (SELECT COUNT(DISTINCT(f2.FUND_LINK_ID)) from fsrv_prod f2 WHERE f2.RISK_CLASS=f.RISK_CLASS" + copy +
                         ") DISTINCT_FUND_COUNT" + " FROM fsrv_prod f" + filterPart;
-                    headers = ["Risk Class", "Fund Count", "Distinct Fund Count"];
-
                     break;
             }
             let result = await queryProcess(query);

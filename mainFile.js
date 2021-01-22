@@ -11,11 +11,19 @@ app.use(express.static(`${__dirname}`));
 app.listen(PORT);
 console.log("Listening on port " + PORT);
 let pool;
-
+/*
+This handler responds to any browser requests to the base domain
+and sends back the html file containing the home page of the application
+*/
 app.get("/", function (req, res) {
     res.sendFile("frontend/index.html", { root: `${__dirname}` });
     console.log("Webpage served");
 });
+/*
+This handler responds to the "/test" request and saves any files 
+contained in the request to the uploads folder. It responds 
+with a "File received!" message.
+*/
 app.post("/test", async function (req, res) {
     if (req.files) {
         let files = req.files;
@@ -35,6 +43,11 @@ app.post("/test", async function (req, res) {
     }
     res.send("Files received!");
 });
+/*
+This handler responds to the "/query" request and sends the query
+from the request body to the MariaDB database. It then responds
+with the result of the query from the database. 
+*/
 app.post("/query", async function (req, res) {
     let result;
     if (pool == undefined) {

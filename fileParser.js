@@ -4,7 +4,10 @@ const e = require("express");
 let mariadb = require("mariadb");
 const { EAFNOSUPPORT } = require("constants");
 let parser = xml2js.Parser();
-
+/*
+This function opens a connection pool to perform bulk queries
+to the MariaDB database and returns the reference to the pool.
+*/
 async function createMariadbConnectionPool() {
     let tempPool;
     try {
@@ -20,10 +23,19 @@ async function createMariadbConnectionPool() {
     }
     return tempPool;
 }
+/*
+This function opens a connection pool and calls the fundlistReader
+function with the pool
+*/
 async function fundlistTest() {
     let pool = await createMariadbConnectionPool();
     await fundlistReader(pool);
 }
+/*
+This function calls the flatFileReader function one time for each
+flat file that has to be read, giving each one a new connection
+pool for the MariaDB database.
+*/
 async function flatFileTest() {
     let pool = await createMariadbConnectionPool();
     await flatFileReader("Fund-Full-20200910.txt", [0, 9, 22, 23, 33, 34, 37], pool,
@@ -107,9 +119,21 @@ async function flatFileTest() {
         " CALENDAR_COMPOUND_RTN, CALENDAR_COMPOUND_RANK, CALENDAR_COMPOUND_RANK_COUNT, CALENDAR_COMPOUND_QUARTILE)" +
         " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 }
+/*
+This statement looks for the "run" argument when calling the fileParser
+file. This prevents errors when calling the file from the mainFile
+as a required file.
+*/
 if (process.argv[2] == "run") {
     fundlistTest();
 }
+/*
+This function takes in a MariaDB connection pool, an array with
+the row content to be inserted into the database and an sql statement
+describing how to insert the data. It then iterates through
+the rowContent and bulkInserts the data in batches of 1000 into
+the database using the sql statement.
+*/
 async function tableInserter(pool, rowContent, sql) {
     let bulkContent = [];
     let bulkContentSpot = 0;
@@ -126,6 +150,16 @@ async function tableInserter(pool, rowContent, sql) {
         await bulkInsert(pool, bulkContent, sql);
     }
 }
+/*
+This function takes in the data from the file referenced in
+the flatFileReader function, an array containing the columns
+of the file which need to be parsed into numbers, the connection
+pool for the MariaDB database and the sql statement to be used
+for the tableInserter function. With these, it breaks down the 
+file data into the subDividedRowsArray 2D array which contains
+all of the content of the rows in the file. It then finishes
+by sending the array to the tableInserter function.
+*/
 async function flatFileInterpreter(data, columnsToFormat, pool, sql) {
     let rowsArray = data.split("\r\n");
     let rowLength = (rowsArray[0].split("|")).length;
@@ -158,10 +192,17 @@ async function flatFileInterpreter(data, columnsToFormat, pool, sql) {
         easyView[i] = firstLine[i] + " " + longestInColumn[i] + " " + longestItemInColumn[i];
     }
     console.log(easyView);
-    //console.log(subdividedRowsArray);
     await tableInserter(pool, subdividedRowsArray, sql);
     return true;
 }
+/*
+This function takes in the filename for the flat file that is
+being processed, the columns which will later be parsed into 
+numbers, the connection pool for the MariaDB database and
+the sql statement which will later be used for inserting the
+data into the database. With these, it reads the referenced file
+and sends the file contents to the flatFileInterpreter function.
+*/
 async function flatFileReader(filename, columnsToFormat, pool, sql) {
     fs.readFile(__dirname + "/uploads/" + filename, 'utf8', async function (err, data) {
         let lock = false;
@@ -171,6 +212,11 @@ async function flatFileReader(filename, columnsToFormat, pool, sql) {
         }
     });
 }
+/*
+This functions takes in the connection pool for the MariaDB database.
+With this, it reads in the FUNDLIST file and sends the pool and file
+contents to the multiple parsers to send to the database.
+*/
 async function fundlistReader(pool) {
     fs.readFile(__dirname + "/uploads/FUNDLIST_I110.xml", 'utf8', async function (err, data) {
         let lock = false;
@@ -189,6 +235,13 @@ async function fundlistReader(pool) {
         }
     });
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the data which goes into the fsrv_prod table and sends
+the data for each row in batches of 1000 to the database.
+*/
 async function fsrv_prodParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -332,6 +385,14 @@ async function fsrv_prodParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the product models which go into the fsrv_prod_model 
+table and sends the data for each row in batches of 1000 to 
+the database.
+*/
 async function fsrv_prod_modelParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -357,7 +418,7 @@ async function fsrv_prod_modelParser(err, data, pool) {
                 result.FundSetup.FundList[a].MgmtCode[0] + "') AND (FUND_ID='" +
                 selectedProduct.FundID[0] + "')";
             currentSEQ_ID = await selectQuery(pool, sql);
-            //Adding products models to the bulk content
+            //Adding product models to the bulk content
             currentObject = selectedProduct.Model[0];
             if (currentObject.FundModel) {
                 currentType = "FUND";
@@ -504,6 +565,13 @@ async function fsrv_prod_modelParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the product minimums which go into the fsrv_mins table and sends
+the data for each row in batches of 1000 to the database.
+*/
 async function fsrv_minsParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -555,6 +623,14 @@ async function fsrv_minsParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the provinces the product is available in, which goes 
+into the fsrv_elig_prov table and sends the data for each row
+in batches of 1000 to the database.
+*/
 async function fsrv_elig_provParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -606,6 +682,14 @@ async function fsrv_elig_provParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the data about which transactions the product is eligible
+for, which goes into the fsrv_elig_trxn table and sends
+the data for each row in batches of 1000 to the database.
+*/
 async function fsrv_elig_trxnParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -703,6 +787,14 @@ async function fsrv_elig_trxnParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the data on which accounts the product is allowed to be in, 
+which goes into the fsrv_elig_acct_types table and sends
+the data for each row in batches of 1000 to the database.
+*/
 async function fsrv_elig_acct_typesParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -790,6 +882,14 @@ async function fsrv_elig_acct_typesParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This functions takes in the FUNDLIST file contents and the
+connection pool for the MariaDB database. With these, it 
+iterates through each fund company's fund list, picks
+out the data about what dividends the product is eligible for, 
+which goes into the fsrv_elig_div_opt table and sends
+the data for each row in batches of 1000 to the database.
+*/
 async function fsrv_elig_div_optParser(err, data, pool) {
     let result;
     parser.parseString(data, async function (err, output) {
@@ -833,6 +933,12 @@ async function fsrv_elig_div_optParser(err, data, pool) {
     //console.log(bulkContent);
     return true;
 }
+/*
+This function takes in a connection pool for the MariaDB database and
+an sql statement to select a specific product in the database. With these,
+it performs a database query and returns the internal database
+FSRV_ID which corresponds to the specified product.
+*/
 async function selectQuery(pool, sql) {
     let con;
     let result;
@@ -849,6 +955,12 @@ async function selectQuery(pool, sql) {
     }
     return result;
 }
+/*
+This function takes in an sql select query of any type and
+a connection pool for the MariaDB database. With these, it
+sends a query to the database and returns the results of
+that query.
+*/
 async function query(sql, pool) {
     let con;
     let result;
@@ -864,6 +976,15 @@ async function query(sql, pool) {
     }
     return result;
 }
+/*
+This functions takes in a connection pool for the MariaDB database,
+an array containing the data for each row to be inserted into the database
+and the sql statement specifying where and how to insert the data
+from the array. With these, it begins a transaction with the database
+and sends the contents of the array in bulk. If the batch insert fails,
+the transaction is rolled back. If it succeeds, the connection
+is released at the end.
+*/
 async function bulkInsert(pool, bulkContent, sql) {
     let con;
     try {
@@ -884,6 +1005,10 @@ async function bulkInsert(pool, bulkContent, sql) {
         }
     }
 }
+/*
+These statements allowed the specified functions to be called
+by any Node.js file which requires the fileParser.js file.
+*/
 exports.createMariadbConnectionPool = createMariadbConnectionPool;
 exports.query = query;
 exports.fundlistReader = fundlistReader;

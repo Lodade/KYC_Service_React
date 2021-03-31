@@ -182,9 +182,9 @@ function resultsBuilder() {
       let eligibleTrxns = await queryProcess(query);
 
       for (let i = 0; i < eligibleTrxns.length; i++) {
-        if (eligibleTrxns[i].TRXN_STATUS == "E") {
+        if (eligibleTrxns[i].TRXN_STATUS === "E") {
           condensedResult[eligibleTrxns[i].TRXN_TYPE] = "Only Existing Holders Allowed";
-        } else if (eligibleTrxns[i].TRXN_STATUS == "A") {
+        } else if (eligibleTrxns[i].TRXN_STATUS === "A") {
           condensedResult[eligibleTrxns[i].TRXN_TYPE] = "Allowed";
         }
       }
@@ -219,9 +219,9 @@ function resultsBuilder() {
       let keys = Object.keys(objectToCheck);
 
       for (let i = 0; i < keys.length; i++) {
-        if (objectToCheck[keys[i]] == statement) {
+        if (objectToCheck[keys[i]] === statement) {
           foundOne = true;
-        } else if (objectToCheck[keys[i]] != statement) {
+        } else if (objectToCheck[keys[i]] !== statement) {
           foundAll = false;
         }
       }

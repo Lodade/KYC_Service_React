@@ -12,21 +12,21 @@ function dashboardManager() {
         let prior = false;
 
         for (let i = 0; i < choices.length; i++) {
-            if (choices[i] != "") {
+            if (choices[i] !== "") {
                 noFiltering = false;
             }
         }
 
         for (let i = 0; i < choices.length; i++) {
-            if (!hasWhere && i == 0 && noFiltering == false) {
+            if (!hasWhere && i === 0 && noFiltering === false) {
                 statement += "WHERE ";
-            } else if (hasWhere && i == 0 && noFiltering == false) {
+            } else if (hasWhere && i === 0 && noFiltering === false) {
                 statement += "AND ";
             }
 
-            if (choices[i] != "" && prior == true) {
+            if (choices[i] !== "" && prior === true) {
                 statement += " AND " + "f." + filters[i] + "=('" + choices[i] + "')";
-            } else if (choices[i] != "") {
+            } else if (choices[i] !== "") {
                 statement += "f." + filters[i] + "=('" + choices[i] + "')";
                 prior = true;
             }
@@ -42,7 +42,7 @@ function dashboardManager() {
         encapsulated in the dashboardManager function so that it can be used
         by any of the functions being returned
         */
-        filterGrab: async function(choices, filters, hasWhere){
+        filterGrab: async function (choices, filters, hasWhere) {
             let result = await queryFilterAssembler(choices, filters, hasWhere);
             return result;
         },
@@ -124,7 +124,7 @@ function dashboardManager() {
                 case "mgmtCo":
                     filterPart = await queryFilterAssembler(choices, filters, false);
 
-                    if (filterPart.substring(0, 6) == " WHERE") {
+                    if (filterPart.substring(0, 6) === " WHERE") {
                         copy = " AND" + filterPart.substring(6, filterPart.length);
                     }
 
@@ -173,7 +173,7 @@ function dashboardManager() {
                 case "risk":
                     filterPart = await queryFilterAssembler(choices, filters, false);
 
-                    if (filterPart.substring(0, 6) == " WHERE") {
+                    if (filterPart.substring(0, 6) === " WHERE") {
                         copy = " AND" + filterPart.substring(6, filterPart.length);
                     }
 

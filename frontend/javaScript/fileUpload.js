@@ -1,30 +1,26 @@
-formSetup();
-
-function formSetup() {
-  let uploadForm = document.getElementById("uploadForm");
-  let fileInput = document.getElementById("xmlFileUpload");
-  uploadForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    fileUploadProcess();
-  });
-
-  async function fileUploadProcess() {
-    let filesToUpload = new FormData();
-
-    for (let i = 0; i < fileInput.files.length; i++) {
-      let fileName = "xmlFile" + i;
-      filesToUpload.append(fileName, fileInput.files[i]);
-    }
-
-    let response = await fetch("/test", {
-      method: "POST",
-      body: filesToUpload
-    });
-
-    if (response.ok) {
-      console.log("File transfer to server successful");
-    } else {
-      console.log("File transfer to server failed");
-    }
-  }
+/*
+This function returns the FileUpload react object that allows for
+xml files to be uploaded to the Node.js middleware but is currently unused
+*/
+function FileUpload() {
+  let page = /*#__PURE__*/React.createElement("div", {
+    id: "manage"
+  }, /*#__PURE__*/React.createElement("form", {
+    id: "uploadForm",
+    method: "post",
+    enctype: "multipart/form-data"
+  }, /*#__PURE__*/React.createElement("label", {
+    for: "xmlFileUpload"
+  }, "Please input an XML file"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    id: "xmlFileUpload",
+    name: "xmlFileUpload",
+    accept: ".xml",
+    multiple: true
+  }), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("input", {
+    type: "submit",
+    id: "xmlSubmit",
+    value: "Submit"
+  })));
+  return page;
 }

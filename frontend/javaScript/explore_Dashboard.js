@@ -6,8 +6,8 @@ can also be filtered by their product type, load type, classification type and
 risk class type respectively.
 */
 function Explore_Dashboard(props) {
-  let dashManager = dashboardManager();
-  let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
+  const dashManager = dashboardManager();
+  const filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
   const [prodTypeChoice, changeProdType] = React.useState("");
   const [loadTypeChoice, changeLoadType] = React.useState("");
   const [classificationChoice, changeClassification] = React.useState("");
@@ -60,102 +60,37 @@ function Explore_Dashboard(props) {
     }
   }
 
+  async function updateTableType(type) {
+    changeName(type);
+    await dashboardUpdate(type, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
+  }
+
   let page = /*#__PURE__*/React.createElement("div", {
     id: "explore_dashboard"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton"
-  }, "Fundserv"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton"
-  }, "Fundata"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton",
-    onClick: async () => {
-      changeName("mgmtCo");
-      await dashboardUpdate("mgmtCo", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-    }
-  }, "Mgmt Co."), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton",
-    onClick: async () => {
-      changeName("prodType");
-      await dashboardUpdate("prodType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-    }
-  }, "Prod. Type"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton",
-    onClick: async () => {
-      changeName("loadType");
-      await dashboardUpdate("loadType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-    }
-  }, "Load Type"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton",
-    onClick: async () => {
-      changeName("classification");
-      await dashboardUpdate("classification", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-    }
-  }, "Classification"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "dashboardButton",
-    onClick: async () => {
-      changeName("risk");
-      await dashboardUpdate("risk", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-    }
-  }, "Risk"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, "Management Company Dashboard")), /*#__PURE__*/React.createElement("form", null, /*#__PURE__*/React.createElement("label", {
-    htmlFor: "PROD_TYPE"
-  }, "Prod. Type: "), /*#__PURE__*/React.createElement("select", {
-    id: "prodTypeChooser",
-    name: filterNames[0],
-    size: "1",
-    onChange: async e => changeFilter(e.target.value, 0)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
-    name: filterNames[0],
-    hasEnum: true,
-    dashManage: dashManager
-  })), /*#__PURE__*/React.createElement("label", {
-    htmlFor: "LOAD_TYPE"
-  }, " Load Type: "), /*#__PURE__*/React.createElement("select", {
-    id: "loadTypeChooser",
-    name: filterNames[1],
-    size: "1",
-    onChange: async e => changeFilter(e.target.value, 1)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
-    name: filterNames[1],
-    hasEnum: true,
-    dashManage: dashManager
-  })), /*#__PURE__*/React.createElement("label", {
-    htmlFor: "CLASSIFICATION"
-  }, " Classification: "), /*#__PURE__*/React.createElement("select", {
-    id: "classificationChooser",
-    name: filterNames[2],
-    size: "1",
-    onChange: async e => changeFilter(e.target.value, 2)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
-    name: filterNames[2],
-    hasEnum: true,
-    dashManage: dashManager
-  })), /*#__PURE__*/React.createElement("label", {
-    htmlFor: "RISK_CLASS"
-  }, " Risk: "), /*#__PURE__*/React.createElement("select", {
-    id: "riskChooser",
-    name: filterNames[3],
-    size: "1",
-    onChange: async e => changeFilter(e.target.value, 3)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "All"), /*#__PURE__*/React.createElement(FilterSet, {
-    name: filterNames[3],
-    hasEnum: false,
-    dashManage: dashManager
-  }))), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(TableTypeButton, {
+    type: "mgmtCo",
+    updateTableType: updateTableType,
+    buttonText: "Mgmt. Co"
+  }), /*#__PURE__*/React.createElement(TableTypeButton, {
+    type: "prodType",
+    updateTableType: updateTableType,
+    buttonText: "Prod. Type"
+  }), /*#__PURE__*/React.createElement(TableTypeButton, {
+    type: "loadType",
+    updateTableType: updateTableType,
+    buttonText: "Load Type"
+  }), /*#__PURE__*/React.createElement(TableTypeButton, {
+    type: "classification",
+    updateTableType: updateTableType,
+    buttonText: "Classification"
+  }), /*#__PURE__*/React.createElement(TableTypeButton, {
+    type: "risk",
+    updateTableType: updateTableType,
+    buttonText: "Risk"
+  }), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, "Management Company Dashboard")), /*#__PURE__*/React.createElement(FilterButtons, {
+    filterNames: filterNames,
+    changeFilter: changeFilter
+  }), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("div", {
     id: "fundCountsArea"
   }, /*#__PURE__*/React.createElement("table", {
     className: "dashboardTable",

@@ -4,9 +4,12 @@
 
 :root {
 	--displayAreaHeight: 93.7vh;
-	--displayAreaWidthAt1250px: 89vw;
-	--displayAreaWidth600px-1250px: 80vw;
-	--displayAreaWidthUnder600px: 70vw;
+	--displayAreaWidthAt1250px: 91vw;
+	--displayAreaWidth600px-1250px: 82vw;
+	--displayAreaWidthUnder600px: 72vw;
+	--resultsAreaWidthAt1250px: 89vw;
+	--resultsAreaWidth600px-1250px: 80vw;
+	--resultsAreaWidthUnder600px: 70vw;
 }
 
 #uploadForm {
@@ -114,14 +117,14 @@
 		top: 6.3vh;
 		left: 28vw;
 		height: var(--displayAreaHeight);
-		width: 72vw;
+		width: var(--displayAreaWidthUnder600px);
 	}
 	#resultsArea {
 		position: absolute;
 		top: 0vh;
 		left: 0vw;
 		height: var(--displayAreaHeight);
-		width: var(--displayAreaWidthUnder600px);
+		width: var(--resultsAreaWidthUnder600px);
 		overflow: auto;
 		margin-left: 2vw;
 	}
@@ -210,7 +213,7 @@
 		top: 0vh;
 		left: 0vw;
 		height: var(--displayAreaHeight);
-		width: var(--displayAreaWidth600px-1250px);
+		width: var(--resultsAreaWidth600px-1250px);
 		overflow: auto;
 		margin-left: 2vw;
 	}
@@ -299,7 +302,7 @@
 		top: 0vh;
 		left: 0vw;
 		height: var(--displayAreaHeight);
-		width: var(--displayAreaWidthAt1250px);
+		width: var(--resultsAreaWidthAt1250px);
 		overflow: auto;
 		margin-left: 2vw;
 	}

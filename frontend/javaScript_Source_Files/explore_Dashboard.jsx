@@ -6,8 +6,8 @@ can also be filtered by their product type, load type, classification type and
 risk class type respectively.
 */
 function Explore_Dashboard(props) {
-    let dashManager = dashboardManager();
-    let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
+    const dashManager = dashboardManager();
+    const filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
     const [prodTypeChoice, changeProdType] = React.useState("");
     const [loadTypeChoice, changeLoadType] = React.useState("");
     const [classificationChoice, changeClassification] = React.useState("");
@@ -59,53 +59,20 @@ function Explore_Dashboard(props) {
         }
     }
 
+    async function updateTableType(type) {
+        changeName(type);
+        await dashboardUpdate(type, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
+    }
+
     let page = (
         <div id="explore_dashboard">
-            <button type="button" className="dashboardButton">Fundserv</button>
-            <button type="button" className="dashboardButton">Fundata</button><br></br>
-            <button type="button" className="dashboardButton" onClick={async () => {
-                changeName("mgmtCo");
-                await dashboardUpdate("mgmtCo", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-            }}>Mgmt Co.</button>
-            <button type="button" className="dashboardButton" onClick={async () => {
-                changeName("prodType");
-                await dashboardUpdate("prodType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-            }}>Prod. Type</button>
-            <button type="button" className="dashboardButton" onClick={async () => {
-                changeName("loadType");
-                await dashboardUpdate("loadType", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-            }}>Load Type</button>
-            <button type="button" className="dashboardButton" onClick={async () => {
-                changeName("classification");
-                await dashboardUpdate("classification", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-            }}>Classification</button>
-            <button type="button" className="dashboardButton" onClick={async () => {
-                changeName("risk");
-                await dashboardUpdate("risk", [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-            }}>Risk</button><br></br>
+            <TableTypeButton type="mgmtCo" updateTableType={updateTableType} buttonText="Mgmt. Co"/>
+            <TableTypeButton type="prodType" updateTableType={updateTableType} buttonText="Prod. Type"/>
+            <TableTypeButton type="loadType" updateTableType={updateTableType} buttonText="Load Type"/>
+            <TableTypeButton type="classification" updateTableType={updateTableType} buttonText="Classification"/>
+            <TableTypeButton type="risk" updateTableType={updateTableType} buttonText="Risk" /><br></br>
             <p><b>Management Company Dashboard</b></p>
-            <form>
-                <label htmlFor="PROD_TYPE">Prod. Type: </label>
-                <select id="prodTypeChooser" name={filterNames[0]} size="1" onChange={async (e) => changeFilter(e.target.value, 0)}>
-                    <option value="">All</option>
-                    <FilterSet name={filterNames[0]} hasEnum={true} dashManage={dashManager} />
-                </select>
-                <label htmlFor="LOAD_TYPE"> Load Type: </label>
-                <select id="loadTypeChooser" name={filterNames[1]} size="1" onChange={async (e) => changeFilter(e.target.value, 1)}>
-                    <option value="">All</option>
-                    <FilterSet name={filterNames[1]} hasEnum={true} dashManage={dashManager} />
-                </select>
-                <label htmlFor="CLASSIFICATION"> Classification: </label>
-                <select id="classificationChooser" name={filterNames[2]} size="1" onChange={async (e) => changeFilter(e.target.value, 2)}>
-                    <option value="">All</option>
-                    <FilterSet name={filterNames[2]} hasEnum={true} dashManage={dashManager} />
-                </select>
-                <label htmlFor="RISK_CLASS"> Risk: </label>
-                <select id="riskChooser" name={filterNames[3]} size="1" onChange={async (e) => changeFilter(e.target.value, 3)}>
-                    <option value="">All</option>
-                    <FilterSet name={filterNames[3]} hasEnum={false} dashManage={dashManager} />
-                </select>
-            </form><br></br>
+            <FilterButtons filterNames={filterNames} changeFilter={changeFilter}/><br></br>
             <div id="fundCountsArea">
                 <table className="dashboardTable" id="fundCountsTable">
                     <thead>

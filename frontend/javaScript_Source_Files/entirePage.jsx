@@ -11,14 +11,7 @@ function EntirePage() {
     let page = (
       <div>
         <TopNavBar />
-        <div className="sideNavBar">
-          <a onClick={() => changeSS(1)}>Dashboard</a>
-          <a onClick={() => changeSS(2)}>View Product</a>
-          <a>View Related</a>
-          <a>View Similar</a>
-          <a>Find By Criteria</a>
-          <a onClick={() => changeSS(6)}>Page Integrator</a>
-        </div>
+        <SideNavBar changeSS={changeSS}/>
         <DisplayArea ms={mainSection} ss={subSection} />
       </div>
     );

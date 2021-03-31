@@ -4,9 +4,9 @@
 
 :root {
 	--displayAreaHeight: 93.7vh;
-	--displayAreaWidthAt1250px: 91vw;
-	--displayAreaWidth600px-1250px: 82vw;
-	--displayAreaWidthUnder600px: 72vw;
+	--displayAreaWidthAt1250px: 89vw;
+	--displayAreaWidth600px-1250px: 80vw;
+	--displayAreaWidthUnder600px: 70vw;
 }
 
 #uploadForm {

@@ -18,7 +18,9 @@ function ResultsArea(props) {
         changeTransStatus(await resultsManager.statusUpdate(props.eligTrxns, "Allowed"));
     }
 
-    React.useEffect(checkStatus);
+    React.useEffect(async () =>{
+        await checkStatus();
+    });
 
     let page = (
         <div id="resultsArea">

@@ -7,15 +7,15 @@ display table
 function RowContent(props) {
   let piece;
 
-  if (props.type == "content") {
+  if (props.type === "content") {
     piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("td", {
       key: index
     }, row));
-  } else if (props.type == "header") {
+  } else if (props.type === "header") {
     piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("th", {
       key: index
     }, row));
-  } else if (props.type == "linkedContent") {
+  } else if (props.type === "linkedContent") {
     piece = props.input.map((row, index) => /*#__PURE__*/React.createElement("td", {
       key: index
     }, /*#__PURE__*/React.createElement("a", {

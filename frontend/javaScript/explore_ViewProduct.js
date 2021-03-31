@@ -89,8 +89,8 @@ function Explore_ViewProduct(props) {
   const [eligProdModels, changeProdModels] = React.useState();
 
   function resultCheck() {
-    if (result != undefined) {
-      if (result[0] == null) {
+    if (result !== undefined) {
+      if (result[0] === null) {
         changeResult();
       } else {
         changeShow(true);
@@ -102,9 +102,9 @@ function Explore_ViewProduct(props) {
     e.preventDefault();
     let basicResults = queryProcess("SELECT * FROM fsrv_prod WHERE concat(MGMT_CODE, FUND_ID) = '" + symbolText + "'");
 
-    if (symbolText != "") {
+    if (symbolText !== "") {
       await basicResults.then(async values => {
-        if (values.length != 0) {
+        if (values.length !== 0) {
           changeResult(await resultsManager.resultsDetailsPopulator(values));
           changeCN(await resultsManager.cnAccountsPopulator(values));
           changeNI(await resultsManager.niAccountsPopulator(values));

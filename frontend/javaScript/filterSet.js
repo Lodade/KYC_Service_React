@@ -7,7 +7,7 @@ function FilterSet(props) {
   const [filterOptions, changeOptions] = React.useState([]);
 
   async function filterOptionsGather() {
-    if (filterOptions[0] == null) {
+    if (filterOptions[0] === null) {
       changeOptions(await props.dashManage.filterListSetup(props.name, props.hasEnum));
     }
   }

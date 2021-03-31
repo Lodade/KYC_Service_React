@@ -8,7 +8,6 @@ risk class type respectively.
 function Explore_Dashboard(props) {
     let dashManager = dashboardManager();
     let filterNames = ["PROD_TYPE", "LOAD_TYPE", "CLASSIFICATION", "RISK_CLASS"];
-    const [firstRun, changeRun] = React.useState(true);
     const [prodTypeChoice, changeProdType] = React.useState("");
     const [loadTypeChoice, changeLoadType] = React.useState("");
     const [classificationChoice, changeClassification] = React.useState("");
@@ -23,12 +22,9 @@ function Explore_Dashboard(props) {
     const [countHeaders, changeCountHeaders] = React.useState(["Mgmt Code", "Fund Count", "Distinct Fund Count"]);
     const [displayHeaders, changeDisplayHeaders] = React.useState(["Management Code + Fund ID", "English Long Name"]);
 
-    React.useEffect(() => {
-        if (firstRun == true) {
-            dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
-            changeRun(false);
-        }
-    });
+    React.useEffect(async () => {
+        await dashboardUpdate(currentName, [prodTypeChoice, loadTypeChoice, classificationChoice, riskClassChoice]);
+    }, []);
 
     async function dashboardUpdate(name, filters) {
         changeCountContents(await dashManager.queryChooser(name, filterNames, filters));

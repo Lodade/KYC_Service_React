@@ -18,7 +18,9 @@ function ResultsArea(props) {
     changeTransStatus(await resultsManager.statusUpdate(props.eligTrxns, "Allowed"));
   }
 
-  React.useEffect(checkStatus);
+  React.useEffect(async () => {
+    await checkStatus();
+  });
   let page = /*#__PURE__*/React.createElement("div", {
     id: "resultsArea"
   }, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("a", null, "Product Search"), '>', /*#__PURE__*/React.createElement("a", null, "Results")), /*#__PURE__*/React.createElement("p", {

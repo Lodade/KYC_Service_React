@@ -14,8 +14,6 @@ function objToArray(object) {
   return output;
 }
 
-formSetup();
-
 function formSetup() {
   let uploadForm = document.getElementById("uploadForm");
   let fileInput = document.getElementById("xmlFileUpload");

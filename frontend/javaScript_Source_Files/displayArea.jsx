@@ -5,6 +5,7 @@ excluding the navigation bars
 */
 function DisplayArea(props) {
     let piece;
+
     if (props.ms === 3) {
       if (props.ss === 1) {
   
@@ -15,7 +16,7 @@ function DisplayArea(props) {
         piece = <Explore_Dashboard />;
       }
       if (props.ss === 2) {
-        piece = <Explore_ViewProduct />;
+        piece = <Explore_ViewProduct changePage={props.changePage} showResults={props.showResults}/>;
       }
       if(props.ss === 6){
         piece = <PageIntegrator/>

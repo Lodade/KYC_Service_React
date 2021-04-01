@@ -24,7 +24,7 @@ function ResultsArea(props) {
 
     let page = (
         <div id="resultsArea">
-            <p><a>Product Search</a>{'>'}<a>Results</a></p>
+            <p><a onClick={async () =>{props.changePage(2, false)}}>Product Search</a>{'>'}<a>Results</a></p>
             <p id="resultsFirstRow">{topRows[0]}</p>
             <p id="resultsSecondRow">{topRows[1]}</p>
             <table id="resultsTable">

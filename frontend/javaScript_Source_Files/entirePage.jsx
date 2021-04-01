@@ -7,12 +7,18 @@ elements are added as subobjects
 function EntirePage() {
     const [mainSection, changeMS] = React.useState(2);
     const [subSection, changeSS] = React.useState(1);
-  
+    const [showResults, toggleResults] = React.useState(false);
+
+    async function changePage(sub, show){
+      changeSS(sub);
+      toggleResults(show);
+    }
+
     let page = (
       <div>
         <TopNavBar />
-        <SideNavBar changeSS={changeSS}/>
-        <DisplayArea ms={mainSection} ss={subSection} />
+        <SideNavBar changePage={changePage}/>
+        <DisplayArea ms={mainSection} ss={subSection} changePage={changePage} showResults={showResults}/>
       </div>
     );
     return page;

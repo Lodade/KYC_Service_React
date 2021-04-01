@@ -88,12 +88,12 @@ function Explore_ViewProduct(props) {
   });
   const [eligProdModels, changeProdModels] = React.useState();
 
-  function resultCheck() {
+  async function resultCheck() {
     if (result !== undefined) {
       if (result[0] === null) {
         changeResult();
       } else {
-        changeShow(true);
+        props.changePage(2, true);
       }
     }
   }
@@ -120,20 +120,23 @@ function Explore_ViewProduct(props) {
     }
   }
 
-  React.useEffect(resultCheck);
+  React.useEffect(async () => {
+    await resultCheck();
+  }, [result]);
 
   function handleInput(e) {
     changeSymbol(e.target.value);
   }
 
-  if (showResults) {
+  if (props.showResults) {
     page = /*#__PURE__*/React.createElement(ResultsArea, {
       fullResults: result[0],
       cnAccs: cnAccounts,
       niAccs: niAccounts,
       eligModels: eligProdModels,
       eligProvs: eligProvinces,
-      eligTrxns: eligTransactions
+      eligTrxns: eligTransactions,
+      changePage: props.changePage
     });
   } else {
     page = /*#__PURE__*/React.createElement(SearchProduct, {

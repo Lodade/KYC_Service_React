@@ -16,7 +16,7 @@ function DisplayArea(props) {
         piece = <Explore_Dashboard />;
       }
       if (props.ss === 2) {
-        piece = <Explore_ViewProduct changePage={props.changePage} showResults={props.showResults}/>;
+        piece = <Explore_ViewProduct/>;
       }
       if(props.ss === 6){
         piece = <PageIntegrator/>

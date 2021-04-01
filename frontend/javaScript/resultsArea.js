@@ -6,6 +6,10 @@ was searched for in the SearchProduct interface
 function ResultsArea(props) {
   let resultsManager = resultsBuilder();
   let topRows = resultsManager.resultsHeaderPopulator(props.fullResults);
+  const {
+    showResults,
+    changeShow
+  } = React.useContext(ResultsContext);
   const [cnStatus, changeCNStatus] = React.useState("redStatusBackground");
   const [niStatus, changeNIStatus] = React.useState("redStatusBackground");
   const [provStatus, changeProvStatus] = React.useState("redStatusBackground");
@@ -25,7 +29,7 @@ function ResultsArea(props) {
     id: "resultsArea"
   }, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("a", {
     onClick: async () => {
-      props.changePage(2, false);
+      changeShow(false);
     }
   }, "Product Search"), '>', /*#__PURE__*/React.createElement("a", null, "Results")), /*#__PURE__*/React.createElement("p", {
     id: "resultsFirstRow"

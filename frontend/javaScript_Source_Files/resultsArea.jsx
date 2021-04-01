@@ -6,6 +6,7 @@ was searched for in the SearchProduct interface
 function ResultsArea(props) {
     let resultsManager = resultsBuilder();
     let topRows = resultsManager.resultsHeaderPopulator(props.fullResults);
+    const {showResults, changeShow} = React.useContext(ResultsContext);
     const [cnStatus, changeCNStatus] = React.useState("redStatusBackground");
     const [niStatus, changeNIStatus] = React.useState("redStatusBackground");
     const [provStatus, changeProvStatus] = React.useState("redStatusBackground");
@@ -24,7 +25,7 @@ function ResultsArea(props) {
 
     let page = (
         <div id="resultsArea">
-            <p><a onClick={async () =>{props.changePage(2, false)}}>Product Search</a>{'>'}<a>Results</a></p>
+            <p><a onClick={async () =>{changeShow(false);}}>Product Search</a>{'>'}<a>Results</a></p>
             <p id="resultsFirstRow">{topRows[0]}</p>
             <p id="resultsSecondRow">{topRows[1]}</p>
             <table id="resultsTable">

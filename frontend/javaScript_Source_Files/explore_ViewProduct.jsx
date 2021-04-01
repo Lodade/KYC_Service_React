@@ -8,7 +8,7 @@ assuming that they put in a valid fund.
 function Explore_ViewProduct(props) {
     let page;
     let resultsManager = resultsBuilder();
-    const [showResults, changeShow] = React.useState(false);
+    const {showResults, changeShow} = React.useContext(ResultsContext);
     const [symbolText, changeSymbol] = React.useState("");
     const [result, changeResult] = React.useState();
     const [cnAccounts, changeCN] = React.useState({
@@ -44,7 +44,7 @@ function Explore_ViewProduct(props) {
             if (result[0] === null) {
                 changeResult();
             } else {
-                props.changePage(2, true);
+                changeShow(true);
             }
         }
     }
@@ -78,9 +78,9 @@ function Explore_ViewProduct(props) {
         changeSymbol(e.target.value);
     }
 
-    if (props.showResults) {
+    if (showResults) {
         page = <ResultsArea fullResults={result[0]} cnAccs={cnAccounts} niAccs={niAccounts} eligModels={eligProdModels}
-            eligProvs={eligProvinces} eligTrxns={eligTransactions} changePage={props.changePage} />
+            eligProvs={eligProvinces} eligTrxns={eligTransactions}/>
     } else {
         page = <SearchProduct onSearch={handleSubmit} symbolInput={handleInput} />
     }

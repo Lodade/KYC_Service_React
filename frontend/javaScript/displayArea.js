@@ -16,10 +16,7 @@ function DisplayArea(props) {
     }
 
     if (props.ss === 2) {
-      piece = /*#__PURE__*/React.createElement(Explore_ViewProduct, {
-        changePage: props.changePage,
-        showResults: props.showResults
-      });
+      piece = /*#__PURE__*/React.createElement(Explore_ViewProduct, null);
     }
 
     if (props.ss === 6) {

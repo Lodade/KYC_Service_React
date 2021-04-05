@@ -8,7 +8,7 @@ Instructions to setup the webapp:
 inter-table dependencies.
 5. Make sure MariaDB is running in the background as a service so that it is accessible.
 6. Open up a terminal with the active directory set to the root directory of the repository.
-7. You will need to install the following libraries using npm which is included with Node.js:  
+7. You will need to install the following modules using npm which is included with Node.js:  
 "@babel/cli": "^7.12.1",  
 "@babel/core": "^7.12.3",  
 "@babel/preset-react": "^7.12.5",  

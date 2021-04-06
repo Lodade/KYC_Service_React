@@ -8,6 +8,10 @@ app.use(upload());
 app.use(express.text());
 app.use(express.static(`${__dirname}\\..`));
 let pool;
+
+async function grabPool(){
+    return pool;
+}
 /*
 This handler responds to any browser requests to the base domain
 and sends back the html file containing the home page of the application
@@ -62,4 +66,5 @@ app.post("/query", async function (req, res) {
     }
 });
 
-module.exports = app;
+module.exports.app = app;
+module.exports.grabPool = grabPool;
